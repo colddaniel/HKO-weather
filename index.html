@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hong Kong Weather Dashboard</title>
+<style>
+:root{--gap:12px;--panel:rgba(10,18,38,.72);--line:rgba(255,255,255,.18);--muted:rgba(255,255,255,.68)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden}
+body{font-family:"Segoe UI","Microsoft JhengHei",sans-serif;color:#fff;background:#16213e;transition:background .7s,color .3s}
+body.theme-normal{background:#16213e}body.theme-yellow{background:#827500}body.theme-red{background:#7d1518}body.theme-black{background:#07080c}body.theme-thunder{background:#332052}body.theme-typhoon{background:#092f70}body.theme-hot{background:#7c2108;animation:hotPulse 3s ease-in-out infinite}body.theme-cold{background:#0a1c45}
+@keyframes hotPulse{50%{background:#bd3d0d}}
+
+/* 全螢幕天氣特效 */
+.global-layer{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:2}
+#globalRain{opacity:0}.has-rain #globalRain{opacity:1}
+.rain-drop{position:absolute;top:-12vh;width:2px;height:28px;background:linear-gradient(transparent,rgba(220,240,255,.72));transform:rotate(14deg);animation:rainFall linear infinite}
+@keyframes rainFall{to{transform:translate(10vw,120vh) rotate(14deg)}}
+#globalWind{opacity:0}.has-wind #globalWind{opacity:1}
+.wind-line{position:absolute;height:3px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);transform:rotate(-12deg);animation:windRun linear infinite}
+@keyframes windRun{from{left:-35vw;opacity:0}12%{opacity:1}88%{opacity:1}to{left:110vw;opacity:0}}
+#globalVortex{inset:50% auto auto 50%;width:min(110vw,110vh);height:min(110vw,110vh);transform:translate(-50%,-50%);opacity:0;filter:drop-shadow(0 0 24px rgba(180,220,255,.22));transition:opacity .5s ease}
+.has-wind #globalVortex{opacity:1}
+.vortex-svg{width:100%;height:100%;overflow:visible;animation:vortexSpin 10s linear infinite}
+.vortex-svg path{fill:none;stroke-linecap:round;filter:drop-shadow(0 0 8px rgba(255,255,255,.55))}
+.vortex-outer{stroke:rgba(205,232,255,.42);stroke-width:2.5;stroke-dasharray:18 12}
+.vortex-arm{stroke:rgba(224,242,255,.62);stroke-width:3.5;stroke-dasharray:88 22}
+.vortex-inner{stroke:rgba(255,255,255,.78);stroke-width:4.5;stroke-dasharray:48 13}
+.has-t1 .vortex-svg{animation-duration:18s;opacity:.42}.has-t3 .vortex-svg{animation-duration:13s;opacity:.58}.has-t8 .vortex-svg{animation-duration:8s}.has-t10 .vortex-svg{animation:vortexSpinFast 2.2s linear infinite;opacity:1}.has-t10 #globalWind .wind-line{height:5px}@keyframes vortexSpinFast{to{transform:rotate(360deg)}}
+@keyframes vortexSpin{to{transform:rotate(360deg)}}
+#globalSnow{opacity:0}.has-snow #globalSnow{opacity:1}
+.snow-flake{position:absolute;top:-10vh;color:rgba(232,247,255,.88);text-shadow:0 0 8px rgba(220,245,255,.72);font-size:clamp(12px,2vw,26px);animation:snowFall linear infinite}
+@keyframes snowFall{0%{transform:translate3d(0,-10vh,0) rotate(0deg);opacity:0}12%{opacity:1}100%{transform:translate3d(var(--drift),115vh,0) rotate(480deg);opacity:.2}}
+#globalLightningSvg{position:fixed;inset:0;width:100%;height:100%;opacity:0;z-index:9;transition:opacity .45s ease-out}
+#flashPrimary,#flashSecondary{position:fixed;inset:0;background:#fff;opacity:0;z-index:10;pointer-events:none}
+#flashSecondary{background:rgba(224,236,255,.76);z-index:8}
+.has-thunder #globalLightningSvg{opacity:.92}
+#alertGlow{position:fixed;inset:0;border:0 solid transparent;pointer-events:none;z-index:12;opacity:0}
+.has-stay-home #alertGlow{opacity:1;border-width:9px;animation:alertGlow 2.4s ease-in-out infinite}
+.theme-black #alertGlow{border-color:rgba(210,220,255,.48)}.theme-typhoon #alertGlow{border-color:rgba(255,80,70,.54)}
+@keyframes alertGlow{50%{box-shadow:inset 0 0 46px rgba(255,255,255,.25)}}
+#stayHome{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:35;display:none;padding:7px 15px;border-radius:999px;background:rgba(0,0,0,.68);border:1px solid rgba(255,255,255,.42);font-size:.78rem;letter-spacing:1px;box-shadow:0 0 18px rgba(255,255,255,.18)}
+.has-stay-home #stayHome{display:block;animation:badgePulse 2.2s ease-in-out infinite}
+
+/* 儀表板網格 */
+.dashboard-shell{position:relative;z-index:20;width:100%;height:100%;padding:clamp(18px,3vw,42px);padding-bottom:clamp(50px,8vh,78px);display:flex;align-items:stretch;justify-content:center}
+.dashboard-grid{width:100%;height:100%;display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-template-rows:repeat(var(--rows),minmax(0,1fr));gap:var(--gap);min-width:0;min-height:0}
+.slot{min-width:0;min-height:0;overflow:hidden;position:relative;border:1px solid var(--line);border-radius:18px;background:rgba(5,10,25,.25);box-shadow:0 12px 35px rgba(0,0,0,.13);padding:clamp(12px,2vw,24px);display:flex;flex-direction:column}.slot-top{transition:opacity .55s ease,transform .55s ease}.slot.chrome-hidden .slot-top{opacity:0;transform:translateY(-8px);pointer-events:none}.slot.widget-size-small .widget-body{font-size:.86em}.slot.widget-size-medium .widget-body{font-size:1em}.slot.widget-size-large .widget-body{font-size:1.14em}.slot.widget-size-small .clock-time{font-size:clamp(1.7rem,5vw,4.8rem)}.slot.widget-size-medium .clock-time{font-size:clamp(2.1rem,6.8vw,6.8rem)}.slot.widget-size-large .clock-time{font-size:clamp(2.8rem,9vw,9.5rem)}.slot.widget-size-small .weather-icon{width:clamp(56px,9vw,120px);height:clamp(56px,9vw,120px)}.slot.widget-size-large .weather-icon{width:clamp(82px,14vw,190px);height:clamp(82px,14vw,190px)}.slot.widget-size-small .weather-temp{font-size:clamp(1.9rem,4.8vw,4.6rem)}.slot.widget-size-large .weather-temp{font-size:clamp(2.8rem,7vw,6.8rem)}
+.slot.empty{align-items:center;justify-content:center;border-style:dashed;background:rgba(255,255,255,.025)}
+.slot-top{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:.74rem;letter-spacing:.7px;margin-bottom:9px;flex:0 0 auto}
+.slot-actions{display:flex;gap:5px}.slot-actions button,.mini-button{border:1px solid var(--line);background:rgba(255,255,255,.08);color:inherit;border-radius:7px;padding:5px 8px;cursor:pointer;font-size:.72rem}.slot-actions button:hover,.mini-button:hover{background:rgba(255,255,255,.18)}
+.widget-body{min-height:0;overflow:auto;display:flex;flex-direction:column;flex:1}.widget-center{align-items:center;justify-content:center;text-align:center}
+.widget-title{font-size:clamp(.85rem,1.3vw,1.1rem);color:var(--muted);margin-bottom:8px}
+
+/* 時鐘樣式 */
+.clock-time{font-size:clamp(3.5rem,18vw,22rem);font-weight:750;line-height:.9;letter-spacing:-2px;white-space:nowrap}
+.clock-zone{font-size:.85rem;color:var(--muted);margin-top:12px}
+.font-small .clock-time{font-size:clamp(2rem,10vw,12rem)}
+.font-medium .clock-time{font-size:clamp(3rem,15vw,18rem)}
+.font-large .clock-time{font-size:clamp(4rem,22vw,26rem)}
+
+/* 天氣組件優化排版 */
+.weather-container{display:flex;align-items:center;justify-content:space-between;gap:clamp(8px,2vw,22px);width:100%;height:100%;flex-wrap:nowrap}
+.weather-main-group{display:flex;flex:1 1 64%;min-width:0;flex-direction:row;align-items:center;justify-content:center;gap:clamp(8px,2vw,22px)}
+.weather-icon{width:clamp(64px,11vw,150px);height:clamp(64px,11vw,150px);object-fit:contain;flex:0 0 auto}
+.weather-temp{font-size:clamp(2rem,5.6vw,5.6rem);font-weight:750;line-height:1;white-space:nowrap}
+.weather-info-group{display:flex;flex:0 1 36%;min-width:0;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left;overflow:hidden}
+.weather-place{color:rgba(255,255,255,.82);font-size:.72rem;line-height:1.25;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.weather-meta-small{color:var(--muted);font-size:.72rem;line-height:1.3;margin-bottom:4px}
+.weather-swt{color:var(--muted);font-size:.68rem;line-height:1.3;margin-top:5px;max-height:2.6em;overflow:hidden}
+.warning-list{line-height:1.5;font-size:.85rem;color:#ffe67a;max-height:5.5em;overflow:hidden}
+
+/* 其他組件 */
+.news-item{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.12)}.news-item:last-child{border-bottom:0}.news-time{font-size:.72rem;color:var(--muted);margin-top:4px}.news-carousel{display:flex;flex:1;min-height:0;flex-direction:column;justify-content:center;gap:10px}.news-topic-row{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:.72rem}.news-topic-badge{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;background:rgba(65,150,229,.24);border:1px solid rgba(127,195,255,.3);white-space:nowrap}.news-headline{display:block;color:#fff;text-decoration:none;font-size:clamp(1rem,2.2vw,1.65rem);font-weight:650;line-height:1.4;transition:opacity .35s ease,transform .35s ease}.news-headline:hover{text-decoration:underline}.news-headline.is-fading{opacity:0;transform:translateY(6px)}.news-source{font-size:.68rem;color:var(--muted);line-height:1.45}.news-error{padding:10px;border-radius:8px;background:rgba(130,20,20,.28);font-size:.76rem;line-height:1.5;color:#ffd4d4}.news-loading{font-size:.8rem;color:var(--muted)}.news-progress{height:3px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}.news-progress span{display:block;height:100%;width:100%;transform-origin:left;background:rgba(154,215,255,.78);animation:newsProgress 8s linear infinite}@keyframes newsProgress{from{transform:scaleX(0)}to{transform:scaleX(1)}}.slot.widget-size-small .news-headline{font-size:clamp(.82rem,1.7vw,1.15rem)}.slot.widget-size-large .news-headline{font-size:clamp(1.2rem,2.7vw,2rem)}.forecast-widget-body{overflow-x:hidden;overflow-y:auto;gap:6px;min-height:0;scrollbar-width:thin;scrollbar-color:rgba(180,220,255,.58) rgba(0,0,0,.16)}.forecast-widget-body::-webkit-scrollbar{width:7px}.forecast-widget-body::-webkit-scrollbar-track{background:rgba(0,0,0,.16);border-radius:8px}.forecast-widget-body::-webkit-scrollbar-thumb{background:rgba(180,220,255,.58);border-radius:8px}.forecast-summary{flex:0 0 auto;color:var(--muted);font-size:.78rem;line-height:1.45;margin-bottom:4px;max-height:none;overflow:visible}.forecast-outlook{flex:0 0 auto;font-size:.72rem;line-height:1.35;color:rgba(255,255,255,.72);margin-top:2px;max-height:none;overflow:visible}.forecast-scroll{display:flex;flex:0 0 auto;min-height:96px;height:clamp(96px,38%,170px);align-items:stretch;gap:8px;overflow-x:auto;overflow-y:hidden;padding:2px 0 5px;scroll-snap-type:x proximity;scrollbar-width:thin;scrollbar-color:rgba(180,220,255,.48) rgba(0,0,0,.12)}.forecast-scroll::-webkit-scrollbar{height:7px}.forecast-scroll::-webkit-scrollbar-track{background:rgba(0,0,0,.12);border-radius:8px}.forecast-scroll::-webkit-scrollbar-thumb{background:rgba(180,220,255,.48);border-radius:8px}.forecast-card{flex:0 0 clamp(96px,30%,170px);min-width:0;min-height:0;height:100%;overflow:hidden;padding:7px;border:1px solid rgba(255,255,255,.15);border-radius:10px;background:rgba(0,0,0,.18);scroll-snap-align:start}.forecast-card img{flex:0 0 auto} .forecast-note{flex:0 0 auto} .eta-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:4px 0 8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.14);font-size:.82rem;font-weight:650}.eta-stop{min-width:0;color:var(--muted);font-size:.7rem;font-weight:400;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bus-settings-panel{margin-top:8px}.slot.widget-size-small .eta-heading{font-size:.7rem}.slot.widget-size-small .eta-stop{font-size:.62rem}.slot.widget-size-small .forecast-scroll{min-height:82px;height:106px}.slot.widget-size-small .forecast-card{padding:5px}.slot.widget-size-large .forecast-scroll{height:clamp(112px,42%,190px)}.slot.widget-size-large .forecast-card{padding:9px}
+.slot.widget-size-small .forecast-card{flex:0 0 95px;min-height:0;height:100%;padding:5px}
+	.slot.widget-size-small .forecast-card strong{font-size:0.65rem}
+	.slot.widget-size-small .forecast-card img{width:32px;height:32px}
+	.slot.widget-size-small .forecast-weather{font-size:0.6rem}.forecast-card strong{display:block;font-size:.78rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.forecast-card img{display:block;width:44px;height:44px;object-fit:contain;margin:5px 0;flex-shrink:0}.forecast-weather{font-size:.69rem;line-height:1.25;color:var(--muted);max-height:2.5em;overflow:hidden}.forecast-temp{font-size:.75rem;margin-top:5px;white-space:nowrap}.forecast-rain{font-size:.67rem;color:#ffe67a;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.swt-text{white-space:pre-wrap;line-height:1.65;color:var(--muted);font-size:.9rem}
+.choose-title{font-size:1rem;margin-bottom:14px}.choose-grid{display:grid;grid-template-columns:repeat(2,minmax(100px,1fr));gap:8px;width:min(310px,100%)}.choose-grid button{border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.1);color:inherit;padding:12px 8px;cursor:pointer}.choose-grid button:hover{background:rgba(255,255,255,.22)}
+.nested-config{display:none;margin-top:10px;padding:10px;border-radius:10px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.12)}.nested-config.open{display:block}.nested-config h4{font-size:.8rem;color:var(--muted);margin-bottom:7px}
+.clock-select,.widget-select,.bus-control select,.bus-control input,.simulation-controls textarea{width:100%;background:rgba(0,0,0,.28);color:inherit;border:1px solid var(--line);border-radius:7px;padding:7px;font-size:.82rem}
+.nested-row{display:flex;gap:6px;margin-bottom:7px}.nested-row>*{min-width:0;flex:1}.search-results{max-height:150px;overflow:auto;display:flex;flex-direction:column;gap:4px}.search-results button{text-align:left;border:1px solid var(--line);background:rgba(255,255,255,.06);color:inherit;border-radius:6px;padding:6px;font-size:.75rem;cursor:pointer}.search-results button:hover{background:rgba(255,255,255,.18)}.favorite-list{display:flex;flex-direction:column;gap:5px;margin:8px 0}.favorite-list button{text-align:left}.eta-list{margin-top:10px;display:flex;flex-direction:column;gap:5px}.eta-row{display:flex;justify-content:space-between;gap:10px;padding:6px 8px;background:rgba(0,0,0,.18);border-radius:6px;font-size:.78rem}.eta-row strong{color:#ffe57c}.bus-status{font-size:.75rem;color:var(--muted);margin-top:7px;line-height:1.5}.mtr-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:3px 0 9px;padding-bottom:7px;border-bottom:1px solid rgba(255,255,255,.14)}.mtr-line-badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 7px;background:#e52b38;color:#fff;font-size:.68rem;font-weight:750;letter-spacing:.25px;white-space:nowrap}.mtr-station{min-width:0;font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}.mtr-directions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;min-height:0}.mtr-direction{min-width:0;padding:7px;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(0,0,0,.15)}.mtr-direction-title{font-size:.69rem;color:var(--muted);padding-bottom:5px;margin-bottom:4px;border-bottom:1px solid rgba(255,255,255,.1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mtr-row{display:flex;align-items:center;justify-content:space-between;gap:5px;padding:5px 0;font-size:.72rem}.mtr-row+.mtr-row{border-top:1px solid rgba(255,255,255,.08)}.mtr-dest{min-width:0;line-height:1.22;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mtr-platform{color:var(--muted);font-size:.62rem}.mtr-row strong{color:#ffe57c;white-space:nowrap;font-size:.72rem}.mtr-alert{padding:9px;border-radius:8px;background:rgba(130,20,20,.28);font-size:.75rem;line-height:1.45;color:#ffd4d4}.slot.widget-size-small .mtr-directions{gap:5px}.slot.widget-size-small .mtr-direction{padding:5px}.slot.widget-size-small .mtr-row{font-size:.63rem;padding:4px 0}.slot.widget-size-small .mtr-row strong{font-size:.63rem}.slot.widget-size-small .mtr-station{font-size:.66rem}
+
+/* 頁面標籤 */
+#lastUpdate{position:fixed;right:10px;bottom:7px;z-index:80;color:rgba(255,255,255,.53);font-size:.68rem;letter-spacing:.3px;pointer-events:none;text-shadow:0 1px 3px #000}
+#swtTicker{position:fixed;left:10px;bottom:7px;z-index:80;max-width:58vw;color:rgba(255,255,255,.63);font-size:.68rem;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;text-shadow:0 1px 3px #000}
+
+/* 設定面板 */
+#toggleBtn{position:fixed;right:12px;bottom:25px;z-index:1002;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.42);backdrop-filter:blur(7px);color:#fff;border-radius:18px;padding:6px 11px;font-size:.9rem;letter-spacing:2px;cursor:pointer;opacity:.72}#toggleBtn:hover{opacity:1}
+#settingsPanel{position:fixed;right:12px;bottom:58px;width:min(410px,calc(100vw - 24px));max-height:min(82vh,720px);overflow:auto;z-index:1001;display:none;padding:15px;border-radius:14px;background:rgba(7,12,26,.92);border:1px solid rgba(255,255,255,.2);box-shadow:0 18px 50px rgba(0,0,0,.4);backdrop-filter:blur(12px)}#settingsPanel.open{display:block}.settings-title{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:10px}.settings-title button{background:none;border:0;color:#fff;font-size:1.1rem;cursor:pointer}.settings-section{padding:10px 0;border-top:1px solid rgba(255,255,255,.12)}.settings-section:first-of-type{border-top:0}.settings-label{font-size:.74rem;color:var(--muted);margin-bottom:7px;letter-spacing:.5px}.settings-buttons{display:flex;flex-wrap:wrap;gap:6px}.settings-buttons button{border:1px solid var(--line);background:rgba(255,255,255,.08);color:#fff;border-radius:7px;padding:7px 9px;font-size:.78rem;cursor:pointer}.settings-buttons button.active{background:#2478c7;border-color:#72b7ff}.settings-buttons button.danger{background:#6a1b1b}.settings-note{font-size:.72rem;line-height:1.55;color:var(--muted);margin-top:7px}.simulation-controls{display:none}.simulation-controls.open{display:block}.simulation-controls textarea{min-height:74px;resize:vertical}.data-preview{max-height:115px;overflow:auto;white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:.68rem;line-height:1.45;color:#cfe3ff;background:rgba(0,0,0,.2);padding:8px;border-radius:7px}
+
+@media(max-width:800px){:root{--gap:8px}.dashboard-shell{padding:10px;padding-bottom:48px}.slot{border-radius:12px;padding:10px}.slot-top{font-size:.68rem}.clock-time{letter-spacing:0}.slot-actions button{padding:4px 6px}.widget-title{font-size:.8rem}.weather-container{gap:12px}.weather-info-group{min-width:110px}}
+@media(max-width:600px) and (orientation:portrait){.dashboard-shell{padding:8px;padding-bottom:44px}.slot{padding:9px}.choose-grid{grid-template-columns:repeat(2,1fr)}.weather-container{gap:5px}.weather-main-group{gap:5px;flex-basis:64%}.weather-info-group{flex-basis:36%;min-width:0}.weather-icon{width:clamp(52px,16vw,88px);height:clamp(52px,16vw,88px)}.weather-temp{font-size:clamp(1.7rem,8vw,3.2rem)}.weather-meta-small,.weather-place{font-size:.62rem}.warning-list{font-size:.68rem}}
+</style>
+</head>
+<body class="theme-normal">
+<div id="globalRain" class="global-layer"></div>
+<div id="globalSnow" class="global-layer"></div>
+<div id="globalWind" class="global-layer"></div>
+<div id="globalVortex" class="global-layer"><svg class="vortex-svg" viewBox="0 0 100 100" aria-hidden="true"><path class="vortex-outer" d="M50 7 C82 7 95 25 91 48 C87 75 63 94 36 88 C12 83 3 61 13 40 C24 17 51 10 72 23 C88 33 84 53 70 65 C53 80 30 73 28 56 C26 42 37 30 51 29 C63 28 72 37 69 48 C67 56 59 61 51 59"/><path class="vortex-arm" d="M51 59 C43 57 41 50 45 44 C50 36 61 37 65 45 C70 56 62 68 50 71 C32 75 18 60 21 43 C25 22 45 13 64 17"/><path class="vortex-inner" d="M51 59 C56 57 58 53 57 49 C56 44 51 42 47 45 C41 50 43 59 50 63 C59 68 70 62 74 53"/></svg></div>
+<svg id="globalLightningSvg" aria-hidden="true"></svg>
+<div id="flashPrimary"></div><div id="flashSecondary"></div><div id="alertGlow"></div>
+<div id="stayHome"></div>
+
+<main class="dashboard-shell"><section id="dashboardGrid" class="dashboard-grid"></section></main>
+<div id="swtTicker" aria-live="polite"></div>
+<div id="lastUpdate">Last Update: Loading</div>
+<button id="toggleBtn" onclick="toggleSettings()">...</button>
+
+<aside id="settingsPanel">
+  <div class="settings-title"><span>Dashboard Settings</span><button onclick="toggleSettings()">×</button></div>
+  <div class="settings-section"><div class="settings-label">語言 / Language</div><div class="settings-buttons"><button id="langTc" onclick="setLanguage('tc')">中文</button><button id="langEn" onclick="setLanguage('en')">English</button></div></div>
+  <div class="settings-section">
+    <div class="settings-label">版面 / Layout</div>
+    <div class="settings-buttons" id="layoutButtons">
+      <button data-layout="auto" onclick="setLayout('auto')">自動/Auto</button><button data-layout="2x1" onclick="setLayout('2x1')">2×1 橫向/Horiz</button><button data-layout="1x2" onclick="setLayout('1x2')">1×2 垂直/Vert</button><button data-layout="2x2" onclick="setLayout('2x2')">2×2 平板/Tablet</button><button data-layout="3x3" onclick="setLayout('3x3')">3×3 大螢幕/Desktop</button>
+    </div>
+  </div>
+  <div class="settings-section">
+    <div class="settings-label">資料模式 / Data Mode</div>
+    <div class="settings-buttons"><button id="liveModeBtn" onclick="setMode('live')">Live 天文台/HKO</button><button id="simModeBtn" onclick="setMode('simulation')">Simulation 測試</button></div>
+    <div id="simulationControls" class="simulation-controls">
+      <div class="settings-note">下列按鈕會修改「模擬收到的警告資料」。/ These buttons modify simulated data.</div>
+      <div class="settings-label" style="margin-top:8px">颱風信號 / Typhoon</div><div class="settings-buttons"><button id="simT1" onclick="toggleSimWarning('typhoon','T1')">T1</button><button id="simT3" onclick="toggleSimWarning('typhoon','T3')">T3</button><button id="simT8" onclick="toggleSimWarning('typhoon','T8')">T8</button><button id="simT10" onclick="toggleSimWarning('typhoon','T10')">T10</button></div>
+      <div class="settings-label" style="margin-top:8px">暴雨警告 / Rainstorm</div><div class="settings-buttons"><button id="simAmber" onclick="toggleSimWarning('rain','AMBER')">黃雨</button><button id="simRed" onclick="toggleSimWarning('rain','RED')">紅雨</button><button id="simBlack" onclick="toggleSimWarning('rain','BLACK')">黑雨</button></div>
+      <div class="settings-label" style="margin-top:8px">特殊天氣 / Special</div><div class="settings-buttons"><button id="simThunder" onclick="toggleSimWarning('special','THUNDER')">雷暴</button><button id="simHot" onclick="toggleSimWarning('special','HOT')">酷熱</button><button id="simCold" onclick="toggleSimWarning('special','COLD')">寒冷</button></div>
+      <div class="settings-label" style="margin-top:8px">SWT 測試文字</div><textarea id="simSwt" placeholder="模擬的 Special Weather Tips"></textarea><button class="mini-button" style="margin-top:5px" onclick="applySimulationSwt()">套用 SWT</button>
+      <div class="settings-label" style="margin-top:8px">天文台原始資料快照 / HKO Snapshot</div><div id="dataPreview" class="data-preview"></div>
+    </div>
+  </div>
+  <div class="settings-section"><button class="mini-button danger" onclick="resetDefault()">Default 重設所有設定</button></div>
+</aside>
+
+<script src="kmb_stops.js"></script>
+<script src="ctb_stops.js"></script>
+<script src="ctb_stop_routes.js"></script>
+<script>
+'use strict';
+
+const STORAGE_KEY='weatherDashboardConfig.v2';
+const DEFAULT_CONFIG={language:'en',layout:'2x1',mode:'live',slots:[{type:'clock',zone:'Asia/Hong_Kong',fontSize:'auto',widgetSize:'medium'},{type:'weather',place:'Hong Kong Observatory',widgetSize:'medium'}],busFavorites:[],simulation:{warnings:[],swt:''}};
+let config=loadConfig();
+let liveData={temperature:'--',humidity:'--',icon:'',locations:{},warnings:[],warningRecords:[],swt:[],forecast:{flw:{},fnd:[]},updatedAt:null};
+let simData={warnings:[],swt:[],temperature:'--',humidity:'--',icon:'',locations:{}};
+let lightningTimer=null,refreshTimer=null,weatherLoading=false;
+const busSearch={};
+const busEtaTimers={};
+const slotHideTimers={};
+const newsState={};
+const newsTimers={};
+const NEWS_PROXY='https://api.rss2json.com/v1/api.json?rss_url=';
+const NEWS_TOPICS={
+  local:{tc:'本地焦點',en:'Hong Kong Top Stories',path:'common/html/topstories.rss.xml'},
+  finance:{tc:'財經',en:'Business & Finance',path:'categories/finance/html/articlelist.rss.xml'},
+  education:{tc:'教育',en:'At School, At Work',path:'categories/school_work/html/articlelist.rss.xml'},
+  health:{tc:'健康與社區',en:'Health & Community',path:'categories/health/html/articlelist.rss.xml'},
+  environment:{tc:'環境',en:'Environment',path:'categories/environment/html/articlelist.rss.xml'},
+  law:{tc:'治安',en:'Law & Order',path:'categories/law_order/html/articlelist.rss.xml'},
+  infrastructure:{tc:'基建與物流',en:'Infrastructure & Logistics',path:'categories/infrastructure/html/articlelist.rss.xml'},
+  admin:{tc:'行政與公民事務',en:'Admin & Civic Affairs',path:'categories/admin/html/articlelist.rss.xml'},
+  city:{tc:'城市生活',en:'City Life',path:'city_life/html/articlelist.rss.xml'},
+  record:{tc:'官員專訪',en:'On The Record',path:'record/html/articlelist.rss.xml'}
+};
+const NEWS_INTERVALS=[5,8,12,20];
+function newsTopicName(topic){const x=NEWS_TOPICS[topic]||NEWS_TOPICS.local;return localText(x.tc,x.en)}
+function newsFeedUrl(topic){const x=NEWS_TOPICS[topic]||NEWS_TOPICS.local;return `https://www.news.gov.hk/${config.language==='en'?'en':'tc'}/${x.path}`}
+function newsInterval(slot){return NEWS_INTERVALS.includes(Number(slot?.newsInterval))?Number(slot.newsInterval):8}
+
+/* 港鐵重鐵：依官方 Next Train API v1.7 的路線及站碼建立離線選單 */
+const MTR_LINES={
+  AEL:{tc:'機場快綫',en:'Airport Express',stations:[['HOK','香港','Hong Kong'],['KOW','九龍','Kowloon'],['TSY','青衣','Tsing Yi'],['AIR','機場','Airport'],['AWE','博覽館','AsiaWorld-Expo']]},
+  TCL:{tc:'東涌綫',en:'Tung Chung Line',stations:[['HOK','香港','Hong Kong'],['KOW','九龍','Kowloon'],['OLY','奧運','Olympic'],['NAC','南昌','Nam Cheong'],['LAK','荔景','Lai King'],['TSY','青衣','Tsing Yi'],['SUN','欣澳','Sunny Bay'],['TUC','東涌','Tung Chung']]},
+  TML:{tc:'屯馬綫',en:'Tuen Ma Line',stations:[['WKS','烏溪沙','Wu Kai Sha'],['MOS','馬鞍山','Ma On Shan'],['HEO','恆安','Heng On'],['TSH','大水坑','Tai Shui Hang'],['SHM','石門','Shek Mun'],['CIO','第一城','City One'],['STW','沙田圍','Sha Tin Wai'],['CKT','車公廟','Che Kung Temple'],['TAW','大圍','Tai Wai'],['HIK','顯徑','Hin Keng'],['DIH','鑽石山','Diamond Hill'],['KAT','啟德','Kai Tak'],['SUW','宋皇臺','Sung Wong Toi'],['TKW','土瓜灣','To Kwa Wan'],['HOM','何文田','Ho Man Tin'],['HUH','紅磡','Hung Hom'],['ETS','尖東','East Tsim Sha Tsui'],['AUS','柯士甸','Austin'],['NAC','南昌','Nam Cheong'],['MEF','美孚','Mei Foo'],['TWW','荃灣西','Tsuen Wan West'],['KSR','錦上路','Kam Sheung Road'],['YUL','元朗','Yuen Long'],['LOP','朗屏','Long Ping'],['TIS','天水圍','Tin Shui Wai'],['SIH','兆康','Siu Hong'],['TUM','屯門','Tuen Mun']]},
+  TKL:{tc:'將軍澳綫',en:'Tseung Kwan O Line',stations:[['NOP','北角','North Point'],['QUB','鰂魚涌','Quarry Bay'],['YAT','油塘','Yau Tong'],['TIK','調景嶺','Tiu Keng Leng'],['TKO','將軍澳','Tseung Kwan O'],['LHP','康城','LOHAS Park'],['HAH','坑口','Hang Hau'],['POA','寶琳','Po Lam']]},
+  EAL:{tc:'東鐵綫',en:'East Rail Line',stations:[['ADM','金鐘','Admiralty'],['EXC','會展','Exhibition Centre'],['HUH','紅磡','Hung Hom'],['MKK','旺角東','Mong Kok East'],['KOT','九龍塘','Kowloon Tong'],['TAW','大圍','Tai Wai'],['SHT','沙田','Sha Tin'],['FOT','火炭','Fo Tan'],['RAC','馬場','Racecourse'],['UNI','大學','University'],['TAP','大埔墟','Tai Po Market'],['TWO','太和','Tai Wo'],['FAN','粉嶺','Fanling'],['SHS','上水','Sheung Shui'],['LOW','羅湖','Lo Wu'],['LMC','落馬洲','Lok Ma Chau']]},
+  SIL:{tc:'南港島綫',en:'South Island Line',stations:[['ADM','金鐘','Admiralty'],['OCP','海洋公園','Ocean Park'],['WCH','黃竹坑','Wong Chuk Hang'],['LET','利東','Lei Tung'],['SOH','海怡半島','South Horizons']]},
+  TWL:{tc:'荃灣綫',en:'Tsuen Wan Line',stations:[['CEN','中環','Central'],['ADM','金鐘','Admiralty'],['TST','尖沙咀','Tsim Sha Tsui'],['JOR','佐敦','Jordan'],['YMT','油麻地','Yau Ma Tei'],['MOK','旺角','Mong Kok'],['PRE','太子','Prince Edward'],['SSP','深水埗','Sham Shui Po'],['CSW','長沙灣','Cheung Sha Wan'],['LCK','荔枝角','Lai Chi Kok'],['MEF','美孚','Mei Foo'],['LAK','荔景','Lai King'],['KWF','葵芳','Kwai Fong'],['KWH','葵興','Kwai Hing'],['TWH','大窩口','Tai Wo Hau'],['TSW','荃灣','Tsuen Wan']]},
+  ISL:{tc:'港島綫',en:'Island Line',stations:[['KET','堅尼地城','Kennedy Town'],['HKU','香港大學','HKU'],['SYP','西營盤','Sai Ying Pun'],['SHW','上環','Sheung Wan'],['CEN','中環','Central'],['ADM','金鐘','Admiralty'],['WAC','灣仔','Wan Chai'],['CAB','銅鑼灣','Causeway Bay'],['TIH','天后','Tin Hau'],['FOH','炮台山','Fortress Hill'],['NOP','北角','North Point'],['QUB','鰂魚涌','Quarry Bay'],['TAK','太古','Tai Koo'],['SWH','西灣河','Sai Wan Ho'],['SKW','筲箕灣','Shau Kei Wan'],['HFC','杏花邨','Heng Fa Chuen'],['CHW','柴灣','Chai Wan']]},
+  KTL:{tc:'觀塘綫',en:'Kwun Tong Line',stations:[['WHA','黃埔','Whampoa'],['HOM','何文田','Ho Man Tin'],['YMT','油麻地','Yau Ma Tei'],['MOK','旺角','Mong Kok'],['PRE','太子','Prince Edward'],['SKM','石硤尾','Shek Kip Mei'],['KOT','九龍塘','Kowloon Tong'],['LOF','樂富','Lok Fu'],['WTS','黃大仙','Wong Tai Sin'],['DIH','鑽石山','Diamond Hill'],['CHH','彩虹','Choi Hung'],['KOB','九龍灣','Kowloon Bay'],['NTK','牛頭角','Ngau Tau Kok'],['KWT','觀塘','Kwun Tong'],['LAT','藍田','Lam Tin'],['YAT','油塘','Yau Tong'],['TIK','調景嶺','Tiu Keng Leng']]},
+  DRL:{tc:'迪士尼綫',en:'Disneyland Resort Line',stations:[['SUN','欣澳','Sunny Bay'],['DIS','迪士尼','Disneyland Resort']]}
+};
+const mtrState={};
+const mtrTimers={};
+function mtrLineName(line){const x=MTR_LINES[line]||MTR_LINES.TKL;return localText(x.tc,x.en)}
+function mtrStationName(line,code){const station=(MTR_LINES[line]?.stations||[]).find(x=>x[0]===code);return station?localText(station[1],station[2]):String(code||'--')}
+
+function clone(x){return JSON.parse(JSON.stringify(x))}
+function loadConfig(){try{const raw=localStorage.getItem(STORAGE_KEY);if(raw)return mergeConfig(JSON.parse(raw))}catch(e){}return clone(DEFAULT_CONFIG)}
+function mergeConfig(saved){const c=clone(DEFAULT_CONFIG);Object.assign(c,saved||{});c.slots=(Array.isArray(saved&&saved.slots)?saved.slots:clone(DEFAULT_CONFIG.slots)).map(s=>Object.assign({widgetSize:'medium'},s||{}));c.busFavorites=Array.isArray(saved&&saved.busFavorites)?saved.busFavorites:[];c.simulation=Object.assign(clone(DEFAULT_CONFIG.simulation),saved&&saved.simulation||{});return c}
+function saveConfig(){localStorage.setItem(STORAGE_KEY,JSON.stringify(config))}
+function activeData(){return config.mode==='simulation'?simData:liveData}
+function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function localText(tc,en){return config.language==='en'?en:tc}
+
+function effectiveLayout(){
+  let layout=config.layout;
+  if(layout==='auto'){
+    const portrait=window.innerHeight>=window.innerWidth;
+    if(window.innerWidth<=760)return portrait?'1x2':'2x1';
+    if(window.innerWidth<=1200)return '2x2';
+    return '3x3';
+  }
+  return layout;
+}
+function dimensions(layout){return { '1x2':[1,2],'2x1':[2,1],'2x2':[2,2],'3x3':[3,3] }[layout]||[2,1]}
+function ensureSlots(count){while(config.slots.length<count)config.slots.push({type:null});if(config.slots.length>count)config.slots=config.slots.slice(0,count)}
+function applyViewClasses(){
+  document.querySelectorAll('#layoutButtons button').forEach(b=>b.classList.toggle('active',b.dataset.layout===config.layout));
+  document.getElementById('liveModeBtn').classList.toggle('active',config.mode==='live');
+  document.getElementById('simModeBtn').classList.toggle('active',config.mode==='simulation');
+  document.getElementById('simulationControls').classList.toggle('open',config.mode==='simulation');
+  document.getElementById('langTc')?.classList.toggle('active',(config.language||'en')==='tc');
+  document.getElementById('langEn')?.classList.toggle('active',(config.language||'en')==='en');
+}
+function setLayout(layout){config.layout=layout;renderDashboard();saveConfig();applyViewClasses()}
+function setLanguage(lang){config.language=lang;document.documentElement.lang=lang==='en'?'en':'zh-Hant';saveConfig();applyViewClasses();if(config.mode==='live')loadHkoData();else{renderAll();updateSimButtons()}}
+function setMode(mode){
+  if(mode==='simulation'&&config.mode!=='simulation'){simData={warnings:clone(liveData.warnings),swt:clone(liveData.swt),temperature:liveData.temperature,humidity:liveData.humidity,icon:liveData.icon,locations:clone(liveData.locations||{})};config.simulation={warnings:clone(simData.warnings),swt:simData.swt.join('\n')};}
+  config.mode=mode;if(mode==='live')loadHkoData();else{syncSimToConfig();renderAll()}saveConfig();applyViewClasses()
+}
+function resetDefault(){if(confirm(localText('確定要回復預設版面及清除已儲存設定嗎？','Reset all settings to default?'))){localStorage.removeItem(STORAGE_KEY);location.reload()}}
+function toggleSettings(){document.getElementById('settingsPanel').classList.toggle('open');if(document.getElementById('settingsPanel').classList.contains('open')){applyViewClasses();updateDataPreview()}}
+
+/* 時鐘 */
+const zoneNames={'Asia/Hong_Kong':['香港時間','Hong Kong Time'],'Europe/London':['倫敦時間','London Time'],'America/New_York':['紐約時間','New York Time'],'Asia/Tokyo':['東京時間','Tokyo Time'],'Australia/Sydney':['悉尼時間','Sydney Time']};
+const weatherPlaces=[['Hong Kong Observatory','香港天文台'],['King\'s Park','京士柏'],['Wong Chuk Hang','黃竹坑'],['Ta Kwu Ling','打鼓嶺'],['Lau Fau Shan','流浮山'],['Tai Po','大埔'],['Sha Tin','沙田'],['Tuen Mun','屯門'],['Tseung Kwan O','將軍澳'],['Sai Kung','西貢'],['Cheung Chau','長洲'],['Chek Lap Kok','赤鱲角'],['Tsing Yi','青衣'],['Tsuen Wan Ho Koon','荃灣可觀'],['Tsuen Wan Shing Mun Valley','荃灣城門谷'],['Hong Kong Park','香港公園'],['Shau Kei Wan','筲箕灣'],['Kowloon City','九龍城'],['Happy Valley','跑馬地'],['Wong Tai Sin','黃大仙'],['Stanley','赤柱'],['Kwun Tong','觀塘'],['Sham Shui Po','深水埗'],['Kai Tak Runway Park','啟德跑道公園'],['Yuen Long Park','元朗公園'],['Tai Mei Tuk','大美督']];
+function formatClock(zone){const now=new Date();return new Intl.DateTimeFormat(config.language==='en'?'en-GB':'zh-HK',{timeZone:zone,hour:'2-digit',minute:'2-digit',hour12:false}).format(now)}
+function formatDate(zone){return new Intl.DateTimeFormat(config.language==='en'?'en-GB':'zh-HK',{timeZone:zone,year:'numeric',month:'long',day:'numeric',weekday:'short'}).format(new Date())}
+function setClockZone(index,zone){config.slots[index].zone=zone;saveConfig();renderSlot(index);showSlotChrome(index)}
+function setClockFont(index,size){config.slots[index].fontSize=size;saveConfig();renderSlot(index);showSlotChrome(index)}
+function setWidgetSize(index,size){config.slots[index].widgetSize=size;saveConfig();renderSlot(index);showSlotChrome(index)}
+function setWeatherPlace(index,place){config.slots[index].place=place;saveConfig();renderSlot(index);showSlotChrome(index)}
+function renderWidgetSizeButtons(index,size){return `<div class="settings-buttons">${['small','medium','large'].map(s=>`<button class="mini-button ${s===size?'active':''}" onclick="setWidgetSize(${index},'${s}')">${localText(s==='small'?'小':s==='medium'?'中':'大',s.toUpperCase())}</button>`).join('')}</div>`}
+function weatherPlaceName(place){const p=weatherPlaces.find(x=>x[0]===place)||weatherPlaces[0];return localText(p[1],p[0])}
+function weatherReading(slot,data){const place=slot.place||'Hong Kong Observatory';const p=weatherPlaces.find(x=>x[0]===place)||weatherPlaces[0];const labels=[p[0],p[1]];const row=(data.locations||{})[labels[0]]||(data.locations||{})[labels[1]];return{place:p[0],temperature:row?.temperature??data.temperature,humidity:data.humidity}}
+function activeForecast(){return liveData.forecast||{flw:{},fnd:[]}}
+function formatForecastDate(value){const text=String(value||'');if(!/^\d{8}$/.test(text))return text;const d=new Date(Number(text.slice(0,4)),Number(text.slice(4,6))-1,Number(text.slice(6,8)));return new Intl.DateTimeFormat(config.language==='en'?'en-GB':'zh-HK',{month:'short',day:'numeric'}).format(d)}
+function forecastIconUrl(icon){return icon?`https://www.hko.gov.hk/images/HKOWxIconOutline/pic${icon}.png`:''}
+function warningDisplayNames(data){return data.warningRecords?.length?data.warningRecords.map(x=>x.name).filter(Boolean):(data.warnings||[])}
+
+/* Widget HTML */
+function widgetPicker(index){return `<div class="choose-title">${localText('選擇功能','Select Widget')}</div><div class="choose-grid"><button onclick="selectWidget(${index},'clock')">時鐘 Clock</button><button onclick="selectWidget(${index},'weather')">天氣 Weather</button><button onclick="selectWidget(${index},'bus')">巴士 Bus</button><button onclick="selectWidget(${index},'mtr')">港鐵 MTR</button><button onclick="selectWidget(${index},'news')">新聞 News</button><button onclick="selectWidget(${index},'forecast')">預報 Forecast</button></div>`}
+function slotTop(index,title){return `<div class="slot-top"><span>${escapeHtml(title)}</span><span class="slot-actions"><button onclick="configureSlot(${index})">${localText('設定','Set')}</button><button onclick="clearSlot(${index})">${localText('清除','Clr')}</button></span></div>`}
+
+function renderClock(index,slot){
+  const zone=slot.zone||'Asia/Hong_Kong';
+  const fontSize=slot.fontSize||'auto';
+  const widgetSize=slot.widgetSize||'medium';
+  const zn=zoneNames[zone]||[zone,zone];
+  return `${slotTop(index,localText('CLOCK','CLOCK'))}<div class="widget-body widget-center ${fontSize!=='auto'?'font-'+fontSize:''}"><div class="clock-time" id="clock-${index}">${formatClock(zone)}</div><div class="clock-zone">${escapeHtml(localText(zn[0],zn[1]))}<br>${formatDate(zone)}</div><div class="nested-config" id="config-${index}"><h4>${localText('選擇時區','Select Timezone')}</h4><select class="clock-select" onchange="setClockZone(${index},this.value)">${Object.entries(zoneNames).map(([z,n])=>`<option value="${z}" ${z===zone?'selected':''}>${localText(n[0],n[1])}</option>`).join('')}</select><h4 style="margin-top:10px">${localText('字體大小','Font Size')}</h4><div class="settings-buttons">${['auto','small','medium','large'].map(s=>`<button class="mini-button ${s===fontSize?'active':''}" onclick="setClockFont(${index},'${s}')">${localText(s==='auto'?'自動':s==='small'?'小':s==='medium'?'中':'大', s.toUpperCase())}</button>`).join('')}</div><h4 style="margin-top:10px">${localText('Widget 大小','Widget Size')}</h4>${renderWidgetSizeButtons(index,widgetSize)}</div></div>`;
+}
+
+function renderWeather(index,slot){
+  const d=activeData();
+  const reading=weatherReading(slot,d);
+  const widgetSize=slot.widgetSize||'medium';
+  const warningNames=warningDisplayNames(d);const warnings=warningNames.length?warningNames.map(w=>`<div>• ${escapeHtml(w)}</div>`).join(''):localText('目前沒有生效天氣警告','No Active Warnings');
+  const swt=(d.swt||[]).join(' · ');
+  return `${slotTop(index,localText('WEATHER','WEATHER'))}<div class="widget-body widget-center"><div class="weather-container"><div class="weather-main-group"><img class="weather-icon" src="${escapeHtml(d.icon||'')}" alt="weather"><div class="weather-temp">${escapeHtml(reading.temperature)}°C</div></div><div class="weather-info-group"><div class="weather-place">${escapeHtml(weatherPlaceName(reading.place))}</div><div class="weather-meta-small">${localText('相對濕度','Humidity')} ${escapeHtml(reading.humidity)}%<br>${localText('來源：','Source: ')}${config.mode==='live'?localText('香港天文台','HKO'):localText('模擬資料','Sim')}</div><div class="warning-list">${warnings}</div>${swt?`<div class="weather-swt">SWT: ${escapeHtml(swt)}</div>`:''}</div></div><div class="nested-config" id="config-${index}"><h4>${localText('天氣地區','Weather Location')}</h4><select class="clock-select" onchange="setWeatherPlace(${index},this.value)">${weatherPlaces.map(p=>`<option value="${p[0]}" ${(slot.place||'Hong Kong Observatory')===p[0]?'selected':''}>${escapeHtml(localText(p[1],p[0]))}</option>`).join('')}</select><h4 style="margin-top:10px">${localText('Widget 大小','Widget Size')}</h4>${renderWidgetSizeButtons(index,widgetSize)}</div></div>`;
+}
+
+function renderForecast(index){
+  const slot=config.slots[index]||{};
+  const widgetSize=slot.widgetSize||'medium';
+  const data=activeForecast();
+  const flw=data.flw||{};
+  const rows=Array.isArray(data.fnd)?data.fnd:[];
+  const hasForecast=Boolean(flw.forecastDesc||rows.length);const summary=hasForecast?(flw.forecastDesc||localText('暫時沒有本地預報。','No local forecast available.')):localText('預報載入中…','Loading forecast...');
+  const outlook=flw.outlook||'';
+  const cards=rows.length?rows.map(r=>{
+    const max=r.forecastMaxtemp?.value??'--',min=r.forecastMintemp?.value??'--';
+    const rh=r.forecastMaxrh?.value!=null&&r.forecastMinrh?.value!=null?`${r.forecastMinrh.value}-${r.forecastMaxrh.value}%`:'';
+    return `<article class="forecast-card"><strong>${escapeHtml(formatForecastDate(r.forecastDate))} · ${escapeHtml(r.week||'')}</strong>${r.ForecastIcon?`<img src="${escapeHtml(forecastIconUrl(r.ForecastIcon))}" alt="forecast">`:''}<div class="forecast-weather">${escapeHtml(r.forecastWeather||'--')}</div><div class="forecast-temp">${escapeHtml(String(min))}° / ${escapeHtml(String(max))}°C</div>${rh?`<div class="forecast-rain">RH ${escapeHtml(rh)}</div>`:''}${r.PSR?`<div class="forecast-rain">${localText('降雨：','Rain: ')}${escapeHtml(r.PSR)}</div>`:''}</article>`;
+  }).join(''):`<div class="bus-status">${localText('暫時沒有九日預報。','No 9-day forecast available.')}</div>`;
+  return `${slotTop(index,localText('FORECAST','FORECAST'))}<div class="widget-body forecast-widget-body"><div class="widget-title">${escapeHtml(flw.forecastPeriod||localText('天氣預報','Weather Forecast'))}</div><div class="forecast-summary">${escapeHtml(summary)}</div>${outlook?`<div class="forecast-outlook">${escapeHtml(outlook)}</div>`:''}<div class="forecast-scroll" aria-label="9-day forecast">${cards}</div><div class="settings-note forecast-note">${localText('左右滑動查看九日預報；資料由香港天文台提供。','Swipe horizontally for the 9-day forecast; data from HKO.')}</div><div class="nested-config" id="config-${index}"><h4>${localText('Widget 大小','Widget Size')}</h4>${renderWidgetSizeButtons(index,widgetSize)}</div></div>`;
+}
+
+function formatMtrEta(time,fallback){
+  if(time){const d=new Date(String(time).replace(' ','T')+'+08:00');const mins=Math.ceil((d-new Date())/60000);if(Number.isFinite(mins))return mins<=0?localText('即將到站','Arriving'):mins+localText(' 分鐘',' mins')}
+  const n=Number(fallback);return Number.isFinite(n)?(n<=0?localText('即將到站','Arriving'):n+localText(' 分鐘',' mins')):'--';
+}
+function renderMtrDirection(line,key,trains){
+  const rows=(trains||[]).filter(x=>x&&x.valid!=='N').slice(0,2);
+  const first=rows[0];const destination=first?mtrStationName(line,first.dest):localText('暫無班次','No service');
+  const directionTitle=first?localText('往 '+destination,'To '+destination):localText(key==='UP'?'上行':'下行',key==='UP'?'UP':'DOWN');
+  const list=rows.length?rows.map(x=>`<div class="mtr-row"><span class="mtr-dest"><span>${escapeHtml(mtrStationName(line,x.dest))}</span><br><span class="mtr-platform">${localText('月台 ','Plat. ')}${escapeHtml(x.plat||'--')}</span></span><strong class="mtr-eta" data-mtr-time="${escapeHtml(x.time||'')}" data-mtr-fallback="${escapeHtml(x.ttnt||'')}">${escapeHtml(formatMtrEta(x.time,x.ttnt))}</strong></div>`).join(''):`<div class="bus-status">${localText('暫時沒有班次','No trains available')}</div>`;
+  return `<section class="mtr-direction"><div class="mtr-direction-title">${escapeHtml(directionTitle)}</div>${list}</section>`;
+}
+function renderMtr(index,slot){
+  const line=MTR_LINES[slot.mtrLine]?slot.mtrLine:'TKL';
+  const stations=MTR_LINES[line].stations;
+  const station=stations.some(x=>x[0]===slot.mtrStation)?slot.mtrStation:stations[0][0];
+  const widgetSize=slot.widgetSize||'medium';
+  const state=mtrState[index]||{};
+  const lineOptions=Object.entries(MTR_LINES).map(([code,item])=>`<option value="${code}" ${code===line?'selected':''}>${escapeHtml(localText(item.tc,item.en))}</option>`).join('');
+  const stationOptions=stations.map(s=>`<option value="${s[0]}" ${s[0]===station?'selected':''}>${escapeHtml(localText(s[1],s[2]))}</option>`).join('');
+  let arrivals;
+  if(state.loading)arrivals=`<div class="bus-status">${localText('正在取得即時列車資料…','Loading live train information...')}</div>`;
+  else if(state.error||state.alert)arrivals=`<div class="mtr-alert">${escapeHtml(state.error||state.alert)}</div>`;
+  else if(state.trains)arrivals=`<div class="mtr-directions">${renderMtrDirection(line,'UP',state.trains.UP)}${renderMtrDirection(line,'DOWN',state.trains.DOWN)}</div>`;
+  else arrivals=`<div class="bus-status">${localText('即時列車資料載入中…','Live train information is loading...')}</div>`;
+  const delayNote=state.delay==='Y'?`<div class="settings-note">${localText('港鐵提示：列車服務可能延誤。','MTR notice: train service may be delayed.')}</div>`:'';
+  return `${slotTop(index,localText('MTR / 港鐵','MTR'))}<div class="widget-body"><div class="mtr-summary"><span class="mtr-line-badge">MTR · ${escapeHtml(line)}</span><span class="mtr-station">${escapeHtml(mtrStationName(line,station))}</span></div>${arrivals}${delayNote}<div class="nested-config ${state.open?'open':''}" id="config-${index}"><h4>${localText('港鐵路線','MTR Line')}</h4><select class="clock-select" onchange="setMtrLine(${index},this.value)">${lineOptions}</select><h4 style="margin-top:10px">${localText('車站','Station')}</h4><select class="clock-select" onchange="setMtrStation(${index},this.value)">${stationOptions}</select><div class="settings-note">${localText('選定車站後會自動收起設定；即時資料每 30 秒更新。','Settings close after selecting a station; live data refreshes every 30 seconds.')}</div><h4 style="margin-top:10px">${localText('Widget 大小','Widget Size')}</h4>${renderWidgetSizeButtons(index,widgetSize)}</div></div>`;
+}
+function ensureMtr(index,force=false){
+  const slot=config.slots[index];if(!slot||slot.type!=='mtr')return;
+  if(!MTR_LINES[slot.mtrLine])slot.mtrLine='TKL';
+  const stations=MTR_LINES[slot.mtrLine].stations;
+  if(!stations.some(x=>x[0]===slot.mtrStation))slot.mtrStation=stations[0][0];
+  const line=slot.mtrLine,station=slot.mtrStation,language=config.language;
+  const state=mtrState[index];
+  if(!force&&state&&state.line===line&&state.station===station&&state.language===language&&(state.loading||state.trains||state.error||state.alert))return;
+  loadMtr(index);
+}
+async function loadMtr(index){
+  const slot=config.slots[index];if(!slot||slot.type!=='mtr')return;
+  const line=MTR_LINES[slot.mtrLine]?slot.mtrLine:'TKL';
+  const stations=MTR_LINES[line].stations;const station=stations.some(x=>x[0]===slot.mtrStation)?slot.mtrStation:stations[0][0];
+  slot.mtrLine=line;slot.mtrStation=station;
+  const language=config.language;const open=Boolean(mtrState[index]?.open);
+  mtrState[index]={open,loading:true,line,station,language};renderSlot(index);
+  try{
+    const url=`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${encodeURIComponent(line)}&sta=${encodeURIComponent(station)}&lang=${language==='en'?'EN':'TC'}`;
+    const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error('MTR API '+response.status);
+    const payload=await response.json();
+    const current=config.slots[index];if(!current||current.type!=='mtr'||current.mtrLine!==line||current.mtrStation!==station||config.language!==language)return;
+    if(payload.status!==1){mtrState[index]={open,loading:false,alert:payload.message||localText('港鐵暫時未能提供列車資料。','MTR train information is temporarily unavailable.'),line,station,language};}
+    else{const entry=(payload.data||{})[`${line}-${station}`];mtrState[index]={open,loading:false,trains:{UP:entry?.UP||[],DOWN:entry?.DOWN||[]},delay:payload.isdelay||'N',line,station,language,updatedAt:new Date()};}
+    renderSlot(index);
+  }catch(e){
+    console.warn('MTR load error',e);const current=config.slots[index];if(!current||current.type!=='mtr'||current.mtrLine!==line||current.mtrStation!==station)return;
+    mtrState[index]={open,loading:false,error:localText('無法取得港鐵即時資料，請稍後重試。','Unable to load live MTR data. Please try again later.'),line,station,language};renderSlot(index);
+  }finally{scheduleMtrRefresh(index)}
+}
+function scheduleMtrRefresh(index){if(mtrTimers[index])clearTimeout(mtrTimers[index]);if(config.slots[index]?.type==='mtr')mtrTimers[index]=setTimeout(()=>loadMtr(index),30000)}
+function setMtrLine(index,line){
+  if(!MTR_LINES[line])return;config.slots[index].mtrLine=line;config.slots[index].mtrStation=MTR_LINES[line].stations[0][0];
+  mtrState[index]=Object.assign({},mtrState[index]||{},{open:true});saveConfig();loadMtr(index);
+}
+function setMtrStation(index,station){
+  const line=config.slots[index].mtrLine;if(!(MTR_LINES[line]?.stations||[]).some(x=>x[0]===station))return;
+  config.slots[index].mtrStation=station;mtrState[index]=Object.assign({},mtrState[index]||{},{open:false});saveConfig();loadMtr(index);
+}
+function refreshMtrDisplay(index){
+  const slot=config.slots[index];if(!slot||slot.type!=='mtr')return;
+  document.querySelectorAll(`[data-slot="${index}"] .mtr-eta`).forEach(el=>{el.textContent=formatMtrEta(el.dataset.mtrTime,el.dataset.mtrFallback)});
+}
+
+function renderNews(index){
+  const slot=config.slots[index]||{};
+  const widgetSize=slot.widgetSize||'medium';
+  const topic=NEWS_TOPICS[slot.newsTopic]?slot.newsTopic:'local';
+  const state=newsState[index]||{};
+  const items=Array.isArray(state.items)?state.items:[];
+  const item=items.length?items[Math.min(state.index||0,items.length-1)]:null;
+  let content;
+  if(state.loading)content=`<div class="news-loading">${localText('正在載入香港新聞…','Loading Hong Kong news...')}</div>`;
+  else if(state.error)content=`<div class="news-error">${escapeHtml(state.error)}<br><button class="mini-button" style="margin-top:8px" onclick="retryNews(${index})">${localText('重試','Retry')}</button></div>`;
+  else if(!item)content=`<div class="news-loading">${localText('暫時沒有新聞標題。','No headlines available.')}</div>`;
+  else content=`<a class="news-headline" id="news-headline-${index}" href="${escapeHtml(item.link||'#')}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a><div class="news-time" id="news-time-${index}">${escapeHtml(formatNewsDate(item.pubDate))}</div><div class="news-source">${localText('來源：香港政府新聞網','Source: news.gov.hk')}</div><div class="news-progress"><span id="news-progress-${index}"></span></div>`;
+  const topicOptions=Object.entries(NEWS_TOPICS).map(([key,n])=>`<option value="${key}" ${key===topic?'selected':''}>${escapeHtml(localText(n.tc,n.en))}</option>`).join('');
+  const interval=Number(slot.newsInterval)||8;
+  return `${slotTop(index,localText('NEWS / 新聞','NEWS'))}<div class="widget-body"><div class="news-topic-row"><span class="news-topic-badge">${escapeHtml(newsTopicName(topic))}</span><span>${items.length?`${(state.index||0)+1}/${items.length}`:''}</span></div><div class="news-carousel">${content}</div><div class="nested-config" id="config-${index}"><h4>${localText('新聞主題','News Topic')}</h4><select class="clock-select" onchange="setNewsTopic(${index},this.value)">${topicOptions}</select><h4 style="margin-top:10px">${localText('輪播速度','Carousel Speed')}</h4><div class="settings-buttons">${NEWS_INTERVALS.map(s=>`<button class="mini-button ${s===interval?'active':''}" onclick="setNewsInterval(${index},${s})">${s}${localText('秒',' sec')}</button>`).join('')}</div><div class="settings-note">${localText('標題會自動輪播；點擊標題可開啟官方原文。','Headlines rotate automatically; tap a title to open the official article.')}</div><h4 style="margin-top:10px">${localText('Widget 大小','Widget Size')}</h4>${renderWidgetSizeButtons(index,widgetSize)}</div></div>`;
+}
+
+function formatNewsDate(value){
+  if(!value)return'';
+  const d=new Date(value);
+  if(Number.isNaN(d.getTime()))return String(value);
+  return d.toLocaleString(config.language==='en'?'en-GB':'zh-HK',{year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
+}
+function newsErrorText(){return localText('新聞暫時無法載入，請檢查網絡或稍後重試。','News is temporarily unavailable. Check the network or try again later.')}
+function ensureNews(index,force=false){
+  const slot=config.slots[index];if(!slot||slot.type!=='news')return;
+  if(!NEWS_TOPICS[slot.newsTopic])slot.newsTopic='local';
+  if(!NEWS_INTERVALS.includes(Number(slot.newsInterval)))slot.newsInterval=8;
+  const topic=slot.newsTopic;
+  const language=config.language;
+  const state=newsState[index];
+  if(!force&&state&&(state.loading||(state.items?.length&&state.topic===topic&&state.language===language)))return;
+  if(newsTimers[index]){clearInterval(newsTimers[index]);delete newsTimers[index]}
+  newsState[index]={loading:true,items:[],index:0,topic,language};
+  renderSlot(index);
+  loadNews(index,topic,language);
+}
+async function loadNews(index,topic,language){
+  const feed=`https://www.news.gov.hk/${language==='en'?'en':'tc'}/${(NEWS_TOPICS[topic]||NEWS_TOPICS.local).path}`;
+  try{
+    const response=await fetch(NEWS_PROXY+encodeURIComponent(feed),{cache:'no-store'});
+    if(!response.ok)throw new Error('RSS proxy '+response.status);
+    const payload=await response.json();
+    if(payload.status&&payload.status!=='ok')throw new Error(payload.message||'RSS feed error');
+    const items=(payload.items||[]).filter(x=>x&&x.title).slice(0,20).map(x=>({title:String(x.title).trim(),link:x.link||'',pubDate:x.pubDate||''}));
+    if(!items.length)throw new Error('No news items');
+    const current=config.slots[index];
+    if(!current||current.type!=='news'||current.newsTopic!==topic||config.language!==language)return;
+    newsState[index]={loading:false,items,index:0,topic,language,updatedAt:new Date()};
+    renderSlot(index);startNewsRotation(index);
+  }catch(e){
+    console.warn('News load error',e);
+    const current=config.slots[index];
+    if(!current||current.type!=='news'||current.newsTopic!==topic||config.language!==language)return;
+    newsState[index]={loading:false,error:newsErrorText(),items:[],index:0,topic,language};
+    renderSlot(index);
+  }
+}
+function startNewsRotation(index){
+  if(newsTimers[index])clearInterval(newsTimers[index]);
+  const slot=config.slots[index],state=newsState[index];
+  if(!slot||!state||state.items.length<2)return;
+  newsTimers[index]=setInterval(()=>rotateNews(index),newsInterval(slot)*1000);
+}
+function rotateNews(index){
+  const state=newsState[index],slot=config.slots[index];
+  if(!state||!slot||slot.type!=='news'||!state.items.length)return;
+  const headline=document.getElementById(`news-headline-${index}`);
+  const time=document.getElementById(`news-time-${index}`);
+  if(!headline||!time){startNewsRotation(index);return}
+  headline.classList.add('is-fading');
+  setTimeout(()=>{
+    const current=newsState[index];if(!current||!current.items.length)return;
+    current.index=(current.index+1)%current.items.length;
+    const item=current.items[current.index];
+    headline.textContent=item.title;headline.href=item.link||'#';time.textContent=formatNewsDate(item.pubDate);
+    const progress=document.getElementById(`news-progress-${index}`);if(progress){progress.innerHTML='';const span=document.createElement('span');progress.appendChild(span)}
+    headline.classList.remove('is-fading');
+    const counter=document.querySelector(`[data-slot="${index}"] .news-topic-row span:last-child`);if(counter)counter.textContent=`${current.index+1}/${current.items.length}`;
+  },360);
+}
+function setNewsTopic(index,topic){
+  if(!NEWS_TOPICS[topic])topic='local';
+  config.slots[index].newsTopic=topic;saveConfig();ensureNews(index,true);
+}
+function setNewsInterval(index,seconds){config.slots[index].newsInterval=NEWS_INTERVALS.includes(Number(seconds))?Number(seconds):8;saveConfig();renderSlot(index);startNewsRotation(index)}
+function retryNews(index){ensureNews(index,true)}
+
+function renderBus(index,slot){
+  const fav=slot.busId?config.busFavorites.find(x=>x.id===slot.busId):null;
+  const widgetSize=slot.widgetSize||'medium';
+  const state=busSearch[index]||{};
+  const favorites=config.busFavorites;
+  const eta=slot.eta||[];
+  const station=fav?localText(fav.nameTc,fav.nameEn):localText('尚未選擇車站','No stop selected');
+  const heading=fav?`<div class="eta-heading"><span>${localText('Next Arrivals','Next Arrivals')}${fav.route?` · ${escapeHtml(fav.route)}`:''}</span><span class="eta-stop" title="${escapeHtml(station)}">${escapeHtml(station)}</span></div>`:'';
+  const etaRows=eta.length?`<div class="eta-list">${eta.slice(0,6).map(x=>`<div class="eta-row"><span><b>${escapeHtml(x.route||'--')}</b> ${escapeHtml(x.dest||'')}</span><strong>${escapeHtml(x.eta||'--')}</strong></div>`).join('')}</div>`:'';
+  const etaStatus=slot.etaError?escapeHtml(slot.etaError):(fav?(fav.provider==='CTB'&&!fav.route?localText('請在設定內選擇城巴路線。','Choose a Citybus route in Set.'):slot.etaLoading?localText('正在取得到站資料…','Loading ETA...'):localText('暫時沒有可用班次。','No ETA currently available.')):localText('請在設定內搜尋並選擇巴士站。','Search and select a bus stop in Set.'));
+  const etaHtml=`${heading}${etaRows||`<div class="bus-status">${etaStatus}</div>`}`;
+  const favHtml=favorites.length?`<div class="favorite-list">${favorites.map(f=>`<button class="mini-button" onclick="useFavorite(${index},'${escapeHtml(f.id)}')">${escapeHtml(f.provider)} · ${escapeHtml(localText(f.nameTc,f.nameEn))}${f.route?' · '+escapeHtml(f.route):''}</button>`).join('')}</div>`:`<div class="bus-status">${localText('尚未有常用巴士站。請在下方搜尋站名。','No favorites. Search below.')}</div>`;
+  return `${slotTop(index,localText('BUS / 巴士','BUS'))}<div class="widget-body"><div class="bus-arrivals">${etaHtml}</div><div class="nested-config bus-settings-panel ${state.open?'open':''}" id="config-${index}"><h4>${localText('搜尋或選擇巴士站','Search or Select Bus Stop')}</h4><div class="nested-row"><select id="bus-provider-${index}" onchange="resetBusSearch(${index})"><option value="KMB" ${(state.provider||'KMB')==='KMB'?'selected':''}>KMB / 九巴</option><option value="CTB" ${(state.provider||'KMB')==='CTB'?'selected':''}>Citybus / 城巴</option></select><input id="bus-route-${index}" value="${escapeHtml(state.route||'')}" placeholder="${localText('路線（可選）','Route (Optional)')}"></div><div class="nested-row"><input id="bus-stop-${index}" value="${escapeHtml(state.stop||'')}" placeholder="${localText('輸入站名關鍵字','Search station name')}"><button class="mini-button" onclick="searchBusStops(${index})">${localText('搜尋','Search')}</button></div><div id="bus-route-options-${index}">${renderBusRouteOptions(index)}</div><div id="bus-results-${index}" class="search-results">${renderBusResults(index)}</div>${fav?`<div class="settings-note">${localText('已選車站 StopID：','Selected StopID: ')}${escapeHtml(fav.stopId)}</div>`:''}<h4 style="margin-top:10px">${localText('常用車站','Favorites')}</h4>${favHtml}<h4 style="margin-top:10px">${localText('Widget 大小','Widget Size')}</h4>${renderWidgetSizeButtons(index,widgetSize)}</div></div>`;
+}
+
+function renderBusRouteOptions(index){
+  const s=busSearch[index];
+  if(!s||!s.routeOptions||!s.routeOptions.length)return '';
+  return `<div class="settings-label" style="margin-top:8px">${localText('選擇城巴路線','Select Citybus Route')}</div><div class="settings-buttons">${(s.routeOptions||[]).slice(0,30).map(r=>`<button class="mini-button" onclick="chooseBusRoute(${index},'${escapeHtml(r.route)}')">${escapeHtml(r.route)}${r.dest?' · '+escapeHtml(r.dest):''}</button>`).join('')}</div>`;
+}
+
+function renderBusResults(index){
+  const s=busSearch[index];
+  if(!s)return '';
+  if(s.error)return `<div class="bus-status">${escapeHtml(s.error)}</div>`;
+  if(s.loading)return `<div class="bus-status">${localText('正在搜尋站點…','Searching stops...')}</div>`;
+  if(!s.results||!s.results.length)return `<div class="bus-status">${localText('找不到符合的巴士站。','No results found.')}</div>`;
+  return s.results.slice(0,30).map(r=>`<button onclick="chooseBusStop(${index},'${escapeHtml(r.provider)}','${escapeHtml(r.id)}','${escapeHtml(r.nameTc||'')}','${escapeHtml(r.nameEn||'')}')">${escapeHtml(localText(r.nameTc,r.nameEn))}</button>`).join('');
+}
+
+function renderSlot(index){
+  const grid=document.getElementById('dashboardGrid');
+  const el=grid.querySelector(`[data-slot="${index}"]`);
+  if(!el)return;
+  const slot=config.slots[index]||{};
+  if(!slot.type){el.className='slot empty';el.innerHTML=widgetPicker(index);return}
+  el.className='slot widget-size-'+(slot.widgetSize||'medium');
+  el.innerHTML=slot.type==='clock'?renderClock(index,slot):slot.type==='weather'?renderWeather(index,slot):slot.type==='bus'?renderBus(index,slot):slot.type==='mtr'?renderMtr(index,slot):slot.type==='forecast'?renderForecast(index):renderNews(index);
+  el.onclick=event=>{if(event.target.closest('button,select,input,textarea,a'))return;showSlotChrome(index)};
+  armSlotAutoHide(index);
+  if(slot.type==='news')ensureNews(index);
+  if(slot.type==='mtr')ensureMtr(index);
+}
+
+function renderDashboard(){
+  const layout=effectiveLayout(),[cols,rows]=dimensions(layout),count=cols*rows;
+  ensureSlots(count);
+  const grid=document.getElementById('dashboardGrid');
+  grid.style.setProperty('--cols',cols);
+  grid.style.setProperty('--rows',rows);
+  grid.innerHTML=Array.from({length:count},(_,i)=>`<article class="slot" data-slot="${i}"></article>`).join('');
+  for(let i=0;i<count;i++)renderSlot(i);
+  applyViewClasses();
+  updateStatusLabels();
+  saveConfig();
+}
+
+function renderAll(){renderDashboard();applyGlobalEffects(activeData());updateDataPreview();updateSwtTicker();updateSimButtons();applyViewClasses()}
+function selectWidget(index,type){
+  config.slots[index]=type==='clock'?{type,zone:'Asia/Hong_Kong',fontSize:'auto',widgetSize:'medium'}:type==='weather'?{type,place:'Hong Kong Observatory',widgetSize:'medium'}:type==='mtr'?{type,mtrLine:'TKL',mtrStation:'TKO',widgetSize:'medium'}:type==='news'?{type,newsTopic:'local',newsInterval:8,widgetSize:'medium'}:{type,widgetSize:'medium'};
+  saveConfig();renderSlot(index);armSlotAutoHide(index);
+}
+function clearSlot(index){if(confirm(localText('清除此窗口內容？','Clear this widget?'))){if(newsTimers[index]){clearInterval(newsTimers[index]);delete newsTimers[index]}if(mtrTimers[index]){clearTimeout(mtrTimers[index]);delete mtrTimers[index]}config.slots[index]={type:null};saveConfig();renderSlot(index)}}
+function showSlotChrome(index){const el=document.querySelector(`[data-slot="${index}"]`);if(!el)return;el.classList.remove('chrome-hidden');if(slotHideTimers[index])clearTimeout(slotHideTimers[index]);armSlotAutoHide(index)}
+function armSlotAutoHide(index){const el=document.querySelector(`[data-slot="${index}"]`);if(!el)return;if(slotHideTimers[index])clearTimeout(slotHideTimers[index]);slotHideTimers[index]=setTimeout(()=>{const panel=document.getElementById(`config-${index}`);if(!panel||!panel.classList.contains('open'))el.classList.add('chrome-hidden')},5000)}
+function configureSlot(index){
+  showSlotChrome(index);
+  const p=document.getElementById(`config-${index}`);
+  const type=config.slots[index].type;
+  if(type==='bus'){
+    const nextOpen=p?!p.classList.contains('open'):true;
+    if(!busSearch[index])busSearch[index]={open:nextOpen,provider:'KMB',results:[]};
+    else busSearch[index].open=nextOpen;
+    renderSlot(index);
+  }else if(type==='mtr'){
+    const nextOpen=p?!p.classList.contains('open'):true;
+    mtrState[index]=Object.assign({},mtrState[index]||{},{open:nextOpen});
+    renderSlot(index);
+  }else if(p)p.classList.toggle('open');
+}
+
+/* 巴士 API */
+async function getBusJson(url){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+  try{
+    const r=await fetch(url,{signal:controller.signal});
+    if(!r.ok)throw new Error('bus api '+r.status);
+    return await r.json();
+  }catch(e){console.error('Bus API Error:',url,e);throw e}finally{clearTimeout(timer)}
+}
+
+async function searchBusStops(index){
+  const provider=document.getElementById(`bus-provider-${index}`).value;
+  const stop=(document.getElementById(`bus-stop-${index}`).value||'').trim().toLowerCase();
+  const route=(document.getElementById(`bus-route-${index}`).value||'').trim().toUpperCase();
+  if(!stop){alert(localText('請輸入巴士站名稱關鍵字。','Please enter stop name.'));return}
+  busSearch[index]={open:true,provider,stop,route,results:[],routeOptions:[],loading:true};
+  renderSlot(index);
+  try{
+    let data;
+    if(provider==='KMB'&&Array.isArray(window.KMB_STOP_CATALOG))data={data:window.KMB_STOP_CATALOG};
+    else if(provider==='KMB')data=await getBusJson('https://data.etabus.gov.hk/v1/transport/kmb/stop');
+    else if(provider==='CTB'&&Array.isArray(window.CTB_STOP_CATALOG))data={data:window.CTB_STOP_CATALOG};
+    else data=await getBusJson('https://rt.data.gov.hk/v2/transport/citybus/stop/CTB');
+    const rows=Array.isArray(data.data)?data.data:Object.values(data.data||{});
+    busSearch[index].results=rows.filter(x=>{
+      const tc=(x.name_tc||x.nameTc||'').toLowerCase(),en=(x.name_en||x.nameEn||'').toLowerCase();
+      return tc.includes(stop)||en.includes(stop);
+    }).map(x=>({provider,id:x.stop||x.stop_id||x.id,nameTc:x.name_tc||x.nameTc,nameEn:x.name_en||x.nameEn}));
+    busSearch[index].loading=false;
+  }catch(e){
+    busSearch[index].loading=false;
+    busSearch[index].error=localText('搜尋失敗，請確認網絡。','Search failed. Check network.');
+  }
+  renderSlot(index);
+}
+
+function resetBusSearch(index){
+  const p=document.getElementById(`bus-provider-${index}`)?.value||'KMB';
+  busSearch[index]={open:true,provider:p,results:[]};
+  renderSlot(index);
+}
+
+async function chooseBusStop(index,provider,id,nameTc,nameEn){
+  const route=(document.getElementById(`bus-route-${index}`)?.value||'').trim().toUpperCase();
+  if(provider==='CTB'&&!route){
+    busSearch[index]={open:true,provider,stop:id,route:'',results:[{provider,id,nameTc,nameEn}],routeOptions:[],loading:true};
+    renderSlot(index);
+    try{
+      const localRoutes=window.CTB_STOP_ROUTES?.[String(id)];
+      if(Array.isArray(localRoutes)&&localRoutes.length){
+        busSearch[index].routeOptions=localRoutes.map(x=>({route:x.route,dest:x.direction==='inbound'?localText('入站','Inbound'):localText('出站','Outbound')}));
+      }else{
+        busSearch[index].routeOptions=[];
+        busSearch[index].error=localText('找不到此站的城巴路線資料。','No Citybus routes found for this stop.');
+      }
+      busSearch[index].loading=false;
+    }catch(e){
+      busSearch[index].loading=false;
+      busSearch[index].error=localText('無法取得路線清單。','Failed to get routes.');
+    }
+    renderSlot(index);
+    return;
+  }
+  const fav={id:provider+'|'+id+'|'+route,provider,stopId:id,nameTc,nameEn,route};
+  config.busFavorites=[fav,...config.busFavorites.filter(x=>x.id!==fav.id)].slice(0,12);
+  config.slots[index]={type:'bus',busId:fav.id,eta:[]};
+  busSearch[index]=Object.assign({},busSearch[index]||{},{open:false,provider,stop:id,route,results:[]});
+  saveConfig();
+  renderSlot(index);
+  loadEta(index);
+}
+
+function chooseBusRoute(index,route){
+  const s=busSearch[index];
+  if(!s||!s.results||!s.results.length)return;
+  const stop=s.results[0];
+  const fav={id:'CTB|'+stop.id+'|'+route,provider:'CTB',stopId:stop.id,nameTc:stop.nameTc,nameEn:stop.nameEn,route};
+  config.busFavorites=[fav,...config.busFavorites.filter(x=>x.id!==fav.id)].slice(0,12);
+  config.slots[index]={type:'bus',busId:fav.id,eta:[]};
+  busSearch[index]=Object.assign({},busSearch[index]||{},{open:false,provider:'CTB',stop:stop.id,route,results:[stop]});
+  saveConfig();
+  renderSlot(index);
+  loadEta(index);
+}
+
+function useFavorite(index,id){
+  const f=config.busFavorites.find(x=>x.id===id);
+  if(!f)return;
+  config.slots[index]={type:'bus',busId:f.id,eta:[]};
+  busSearch[index]=Object.assign({},busSearch[index]||{},{open:false,provider:f.provider,stop:f.stopId,route:f.route||'',results:[]});
+  saveConfig();
+  renderSlot(index);
+  loadEta(index);
+}
+
+async function loadEta(index){
+  const slot=config.slots[index],fav=config.busFavorites.find(x=>x.id===slot.busId);
+  if(!fav)return;
+  slot.etaLoading=true;slot.etaError='';slot.eta=[];renderSlot(index);
+  try{
+    if(fav.provider==='KMB'&&!/^[0-9A-F]{16}$/i.test(String(fav.stopId||'')))throw new Error('Invalid KMB StopID');
+    let rows=[];
+    if(fav.provider==='KMB'){
+      const data=await getBusJson('https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/'+encodeURIComponent(fav.stopId));
+      rows=(data.data||[]).filter(x=>!fav.route||String(x.route).toUpperCase()===fav.route.toUpperCase()).map(x=>({route:x.route,dest:localText(x.dest_tc||x.dest_en||'', x.dest_en||x.dest_tc||''),etaAt:x.eta,eta:formatEta(x.eta)}));
+    }else{
+      if(!fav.route){slot.etaLoading=false;slot.etaError=localText('請先選擇城巴路線。','Please select a Citybus route first.');renderSlot(index);return;}
+      const data=await getBusJson('https://rt.data.gov.hk/v2/transport/citybus/eta/CTB/'+encodeURIComponent(fav.stopId)+'/'+encodeURIComponent(fav.route));
+      rows=(data.data||[]).map(x=>({route:x.route,dest:localText(x.dest_tc||x.dest_en||'', x.dest_en||x.dest_tc||''),etaAt:x.eta,eta:formatEta(x.eta)}));
+    }
+    slot.eta=rows.filter(x=>x.eta!=='--').sort((a,b)=>{
+      const am=parseInt(a.eta),bm=parseInt(b.eta);
+      return (Number.isFinite(am)?am:999)-(Number.isFinite(bm)?bm:999);
+    }).slice(0,6);
+    slot.etaLoading=false;slot.etaError=slot.eta.length?'':localText('此站暫時沒有可用班次。','No ETA is currently available for this stop.');
+    renderSlot(index);
+  }catch(e){console.error('ETA Load Error',e);slot.etaLoading=false;slot.etaError=localText('無法取得到站資料：請檢查網絡、API 或 StopID。','Unable to load ETA: check network, API or StopID.');renderSlot(index)}
+  if(busEtaTimers[index])clearTimeout(busEtaTimers[index]);
+  busEtaTimers[index]=setTimeout(()=>loadEta(index),60000);
+}
+
+function formatEta(value){
+  if(!value)return'--';
+  const d=new Date(value),mins=Math.ceil((d-new Date())/60000);
+  if(Number.isFinite(mins))return mins<=0?localText('即將到站','Arriving'):mins+localText(' 分鐘',' mins');
+  return String(value).slice(11,16);
+}
+function refreshEtaDisplay(index){
+  const slot=config.slots[index];
+  if(!slot||slot.type!=='bus'||!Array.isArray(slot.eta))return;
+  const rows=slot.eta.map(x=>Object.assign({},x,{eta:x.etaAt?formatEta(x.etaAt):x.eta}));
+  slot.eta=rows;
+  const el=document.querySelector(`[data-slot="${index}"] .eta-list`);
+  if(!el)return;
+  const values=el.querySelectorAll('.eta-row strong');
+  rows.slice(0,values.length).forEach((row,i)=>{values[i].textContent=row.eta||'--'});
+}
+
+/* 天文台資料 */
+async function getHkoJson(url,fallback){try{const r=await fetch(url);if(!r.ok)throw new Error('HKO '+r.status);return await r.json()}catch(e){console.warn('HKO data error',url,e);return fallback}}
+function parseWarnings(raw){
+  const records=[];
+  Object.entries(raw||{}).forEach(([code,x])=>{
+    if(!x||!(x.name||x.warningName))return;
+    const action=String(x.actionCode||'').toUpperCase();
+    if(action==='CANCEL')return;
+    records.push({code,name:x.name||x.warningName||'',actionCode:action,issueTime:x.issueTime||x.issue_time||'',expireTime:x.expireTime||x.expire_time||''});
+  });
+  return records;
+}
+function parseSwt(raw){
+  if(Array.isArray(raw))return raw.map(x=>typeof x==='string'?x:(x.desc||x.description||'')).filter(Boolean);
+  if(raw&&Array.isArray(raw.data))return raw.data.map(x=>x.desc||x.description||'').filter(Boolean);
+  return[];
+}
+async function loadHkoData(){
+  if(weatherLoading)return;
+  weatherLoading=true;
+  try{
+    const base='https://data.weather.gov.hk/weatherAPI/opendata/weather.php';
+    const lang=config.language==='en'?'en':'tc';
+    const fallback=liveData.forecast||{flw:{},fnd:[]};
+    const [now,warn,swt,flw,fnd]=await Promise.all([
+      getHkoJson(base+'?dataType=rhrread&lang='+lang,{}),
+      getHkoJson(base+'?dataType=warnsum&lang='+lang,{}),
+      getHkoJson(base+'?dataType=swt&lang='+lang,[]),
+      getHkoJson(base+'?dataType=flw&lang='+lang,fallback.flw||{}),
+      getHkoJson(base+'?dataType=fnd&lang='+lang,{weatherForecast:fallback.fnd||[]})
+    ]);
+    const mainPlace=config.language==='en'?'Hong Kong Observatory':'香港天文台';
+    const temp=(now.temperature?.data||[]).find(x=>x.place===mainPlace)||now.temperature?.data?.[0]||{};
+    liveData.temperature=temp.value??'--';
+    liveData.locations={};
+    (now.temperature?.data||[]).forEach(row=>{if(row.place)liveData.locations[row.place]={temperature:row.value}});
+    liveData.humidity=now.humidity?.data?.[0]?.value??'--';
+    liveData.icon=now.icon?.[0]?`https://www.hko.gov.hk/images/HKOWxIconOutline/pic${now.icon[0]}.png`:'';
+    liveData.warningRecords=parseWarnings(warn);
+    liveData.warnings=liveData.warningRecords.map(x=>`${x.code||''} ${x.name}`.trim());
+    liveData.swt=parseSwt(swt);
+    liveData.forecast={flw:flw||{},fnd:Array.isArray(fnd?.weatherForecast)?fnd.weatherForecast:(fallback.fnd||[])};
+    if(config.mode==='simulation'){simData.temperature=liveData.temperature;simData.humidity=liveData.humidity;simData.icon=liveData.icon;simData.locations=clone(liveData.locations||{})}
+    liveData.updatedAt=new Date();
+    updateStatusLabels();
+    renderAll();
+  }catch(e){console.error('HKO load error',e)}finally{weatherLoading=false}
+}
+
+function updateDataPreview(){
+  const el=document.getElementById('dataPreview');
+  if(!el)return;
+  el.textContent=JSON.stringify({temperature:liveData.temperature,humidity:liveData.humidity,warnings:liveData.warnings,warningRecords:liveData.warningRecords,swt:liveData.swt,forecastDays:liveData.forecast?.fnd?.length||0},null,2);
+  document.getElementById('simSwt').value=config.simulation.swt||'';
+}
+
+function updateStatusLabels(){
+  const el=document.getElementById('lastUpdate');
+  if(el)el.textContent=(config.language==='en'?'Last Update: ':'最後更新：')+(liveData.updatedAt?liveData.updatedAt.toLocaleTimeString(config.language==='en'?'en-GB':'zh-Hant-HK',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}):'---');
+  const swt=document.getElementById('swtTicker');
+  let info = liveData.swt.length ? liveData.swt.join(' | ') : '';
+  if(liveData.warningRecords && liveData.warningRecords.length > 0){
+    const warnInfo = liveData.warningRecords.map(w => {
+      const issue = w.issueTime ? new Date(w.issueTime).toLocaleTimeString('en-GB', {hour12:false, hour:'2-digit', minute:'2-digit'}) : '';
+      const expire = w.expireTime ? new Date(w.expireTime).toLocaleTimeString('en-GB', {hour12:false, hour:'2-digit', minute:'2-digit'}) : '';
+      let str = w.name + (issue ? ` (${issue}` : '');
+      if(expire) str += ` - ${expire}`;
+      if(issue) str += ')';
+      return str;
+    }).join(' | ');
+    info = (warnInfo + (info ? ' || ' + info : ''));
+  }
+  if(swt)swt.textContent=info;
+}
+
+function syncSimToConfig(){
+  simData.warnings=clone(config.simulation.warnings||[]);
+  simData.swt=(config.simulation.swt||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
+  simData.temperature=liveData.temperature;simData.humidity=liveData.humidity;simData.icon=liveData.icon;simData.locations=clone(liveData.locations||{});
+}
+
+function warningLabel(type,value){
+  const tc={T1:'一號戒備信號',T3:'三號強風信號',T8:'八號烈風或暴風信號',T10:'十號颶風信號',AMBER:'黃色暴雨警告',RED:'紅色暴雨警告',BLACK:'黑色暴雨警告',THUNDER:'雷暴警告',HOT:'酷熱天氣警告',COLD:'寒冷天氣警告'};
+  const en={T1:'Standby Signal No. 1',T3:'Strong Wind Signal No. 3',T8:'Gale or Storm Signal No. 8',T10:'Hurricane Signal No. 10',AMBER:'Amber Rainstorm Warning',RED:'Red Rainstorm Warning',BLACK:'Black Rainstorm Warning',THUNDER:'Thunderstorm Warning',HOT:'Very Hot Weather Warning',COLD:'Cold Weather Warning'};
+  return localText(tc[value]||value, en[value]||value);
+}
+
+function toggleSimWarning(group,value){
+  if(config.mode!=='simulation')return;
+  let ws=simData.warnings.filter(Boolean);
+  const label=warningLabel(group,value);
+  const exists=ws.includes(label);
+  if(group==='typhoon')ws=ws.filter(w=>!/Signal|信號|Hurricane|颶風/i.test(w));
+  else if(group==='rain')ws=ws.filter(w=>!/Rainstorm|暴雨/i.test(w));
+  if(exists)ws=ws.filter(w=>w!==label);else ws.push(label);
+  simData.warnings=ws;config.simulation.warnings=clone(ws);
+  saveConfig();renderAll();updateSimButtons();
+}
+function applySimulationSwt(){if(config.mode!=='simulation')return;config.simulation.swt=document.getElementById('simSwt').value;syncSimToConfig();saveConfig();renderAll()}
+function updateSimButtons(){
+  const ws=simData.warnings.join('|');
+  const mark=(id,on)=>document.getElementById(id)?.classList.toggle('active',on);
+  mark('simT1',/(?:一號戒備|Signal No\. 1\b|\bT1\b)/i.test(ws));mark('simT3',/(?:三號強風|Signal No\. 3\b|\bT3\b)/i.test(ws));mark('simT8',/(?:八號烈風|Signal No\. 8\b|\bT8\b)/i.test(ws));mark('simT10',/(?:十號颶風|Signal No\. 10\b|\bT10\b)/i.test(ws));
+  mark('simAmber',ws.includes('Amber')||ws.includes('黃色'));mark('simRed',ws.includes('Red')||ws.includes('紅色'));mark('simBlack',ws.includes('Black')||ws.includes('黑色'));
+  mark('simThunder',/Thunder|雷暴/i.test(ws));mark('simHot',/Hot|酷熱/i.test(ws));mark('simCold',/Cold|寒冷/i.test(ws));
+}
+
+function classify(warnings){
+  const s=warnings.join(' ').toLowerCase();
+  const genericRain=s.includes('wrain')||s.includes('rainstorm warning signal');
+  const thunderWarning=s.includes('wts')||s.includes('thunderstorm')||s.includes('thunder')||s.includes('雷暴');
+  return{black:s.includes('black')||s.includes('黑色'),red:s.includes('red')||s.includes('紅色'),yellow:genericRain||s.includes('amber')||s.includes('yellow')||s.includes('黃色'),thunder:thunderWarning,hot:s.includes('hot')||s.includes('酷熱'),cold:s.includes('cold')||s.includes('寒冷'),snow:s.includes('cold')||s.includes('寒冷'),t1:/signal no\. 1\b|一號戒備|\bt1\b/i.test(s),t3:/signal no\. 3\b|三號強風|\bt3\b/i.test(s),t8:/signal no\. 8\b|八號|\bt8\b/i.test(s),t10:/signal no\. 10\b|十號|\bt10\b/i.test(s)}
+  }
+function applyGlobalEffects(data){
+  const f=classify(data.warnings||[]);const b=document.body;
+  b.classList.remove('theme-normal','theme-yellow','theme-red','theme-black','theme-thunder','theme-typhoon','theme-hot','theme-cold','has-rain','has-snow','has-wind','has-thunder','has-t1','has-t3','has-t8','has-t10','has-stay-home');
+  let theme='theme-normal';
+  if(f.black)theme='theme-black';else if(f.red)theme='theme-red';else if(f.yellow)theme='theme-yellow';else if(f.thunder)theme='theme-thunder';else if(f.t1||f.t3||f.t8||f.t10)theme='theme-typhoon';else if(f.hot)theme='theme-hot';else if(f.cold)theme='theme-cold';
+  b.classList.add(theme);
+  if(f.black||f.red||f.yellow)b.classList.add('has-rain');if(f.snow)b.classList.add('has-snow');if(f.t1||f.t3||f.t8||f.t10)b.classList.add('has-wind');if(f.thunder)b.classList.add('has-thunder');if(f.t1)b.classList.add('has-t1');if(f.t3)b.classList.add('has-t3');if(f.t8)b.classList.add('has-t8');if(f.t10)b.classList.add('has-t10');
+  if(f.black||f.t8||f.t10)b.classList.add('has-stay-home');
+  buildRain(f);buildSnow(f);buildWind(f);startLightning(f);
+  document.getElementById('stayHome').textContent=f.black?localText('黑雨：請留在安全地方','Black Rainstorm: STAY HOME'):(f.t10?localText('十號颶風信號：請留在安全地方','T10 Hurricane: STAY HOME'):(f.t8?localText('八號風球：請留在安全地方','T8 Gale/Storm: STAY HOME'):''));
+}
+
+function buildRain(f){
+  const el=document.getElementById('globalRain');el.innerHTML='';if(!(f.black||f.red||f.yellow))return;
+  const n=f.black?220:f.red?150:100;
+  for(let i=0;i<n;i++){const d=document.createElement('i');d.className='rain-drop';d.style.left=Math.random()*105+'vw';d.style.animationDuration=(.45+Math.random()*.8)+'s';d.style.animationDelay=(-Math.random()*2)+'s';d.style.opacity=(.25+Math.random()*.55);el.appendChild(d)}
+}
+function buildSnow(f){
+  const el=document.getElementById('globalSnow');el.innerHTML='';if(!f.snow)return;
+  const chars=['❄','❅','❆','✦','·'];
+  for(let i=0;i<95;i++){const d=document.createElement('i');d.className='snow-flake';d.textContent=chars[Math.floor(Math.random()*chars.length)];d.style.left=Math.random()*100+'vw';d.style.setProperty('--drift',(Math.random()*18-9)+'vw');d.style.animationDuration=(5+Math.random()*7)+'s';d.style.animationDelay=(-Math.random()*8)+'s';d.style.opacity=(.35+Math.random()*.6);el.appendChild(d)}
+}
+function buildWind(f){
+  const el=document.getElementById('globalWind');el.innerHTML='';if(!(f.t1||f.t3||f.t8||f.t10))return;
+  const n=f.t10?32:f.t8?18:f.t3?11:6;
+  for(let i=0;i<n;i++){const d=document.createElement('i');d.className='wind-line';d.style.top=Math.random()*100+'vh';d.style.width=(180+Math.random()*420)+'px';d.style.animationDuration=(f.t10?1.5:3)+Math.random()*3+'s';d.style.animationDelay=(-Math.random()*4)+'s';el.appendChild(d)}
+}
+function startLightning(f){if(lightningTimer)clearTimeout(lightningTimer);if(!f.thunder){document.getElementById('globalLightningSvg').innerHTML='';return}const delay=(f.black||f.t10)?1700+Math.random()*1600:2400+Math.random()*2600;lightningTimer=setTimeout(()=>{flashLightning();startLightning(f)},delay)}
+function flashLightning(){
+  const svg=document.getElementById('globalLightningSvg');svg.innerHTML='';const w=innerWidth,h=innerHeight;
+  for(let j=0;j<2;j++){
+    let x=Math.random()*w,path=`M ${x} 0`;for(let i=1;i<=9;i++){x+=((Math.random()-.5)*Math.min(150,w*.16));path+=` L ${x} ${(h/9)*i}`}
+    const p=document.createElementNS('http://www.w3.org/2000/svg','path');p.setAttribute('d',path);p.setAttribute('fill','none');p.setAttribute('stroke',j?'rgba(195,225,255,.78)':'#fff');p.setAttribute('stroke-width',j?'2':'4');p.setAttribute('filter','drop-shadow(0 0 8px #fff)');svg.appendChild(p)
+  }
+  const a=document.getElementById('flashPrimary'),c=document.getElementById('flashSecondary');svg.style.opacity='1';a.style.opacity='.7';setTimeout(()=>a.style.opacity='0',140);setTimeout(()=>{c.style.opacity='.5';setTimeout(()=>c.style.opacity='0',260)},260);setTimeout(()=>{svg.style.opacity='0';svg.innerHTML=''},1000)
+}
+
+function updateSwtTicker(){const text=(activeData().swt||[]).join('  ·  ');document.getElementById('swtTicker').textContent=text?localText('SWT：','SWT: ')+text:''}
+function renderAll(){renderDashboard();applyGlobalEffects(activeData());updateDataPreview();updateSwtTicker();updateSimButtons();applyViewClasses()}
+
+window.addEventListener('resize',()=>{renderDashboard()});
+setInterval(()=>{for(let i=0;i<config.slots.length;i++){if(config.slots[i]?.type==='clock'){const el=document.getElementById('clock-'+i);if(el)el.textContent=formatClock(config.slots[i].zone||'Asia/Hong_Kong')}refreshEtaDisplay(i);refreshMtrDisplay(i)}},1000);
+
+/* 初始化 */
+document.documentElement.lang=(config.language||'en')==='en'?'en':'zh-Hant';
+if(config.mode==='simulation')syncSimToConfig();
+renderAll();
+config.slots.forEach((slot,index)=>{if(slot?.type==='bus'&&slot.busId)loadEta(index)});
+loadHkoData();
+refreshTimer=setInterval(()=>{if(config.mode==='live')loadHkoData()},60000);
+</script>
+</body>
+</html>
