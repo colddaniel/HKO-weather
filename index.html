@@ -482,7 +482,11 @@ function renderSlot(index){
   if(!slot.type){el.className='slot empty';el.innerHTML=widgetPicker(index);return}
   el.className='slot widget-size-'+(slot.widgetSize||'medium');
   el.innerHTML=slot.type==='clock'?renderClock(index,slot):slot.type==='weather'?renderWeather(index,slot):slot.type==='bus'?renderBus(index,slot):slot.type==='mtr'?renderMtr(index,slot):slot.type==='forecast'?renderForecast(index):renderNews(index);
-  el.onclick=event=>{if(event.target.closest('button,select,input,textarea,a'))return;showSlotChrome(index)};
+  
+  const glassOverlay=el.querySelector('.glass-overlay');
+  if(!glassOverlay){const go=document.createElement('div');go.className='glass-overlay';el.insertBefore(go,el.firstChild)}
+  else{el.appendChild(glassOverlay)}
+el.onclick=event=>{if(event.target.closest('button,select,input,textarea,a'))return;showSlotChrome(index)};
   armSlotAutoHide(index);
   if(slot.type==='news')ensureNews(index);
   if(slot.type==='mtr')ensureMtr(index);
