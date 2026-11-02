@@ -14,14 +14,14 @@ body.theme-normal{background:#16213e}body.theme-yellow{background:#827500}body.t
 
 /* 全螢幕天氣特效 */
 .global-layer{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:25}
-#globalRain{opacity:0}.has-rain #globalRain{opacity:1}
+#globalRain{opacity:0}.has-rain #globalRain{opacity:.45}
 .rain-drop{position:absolute;top:-12vh;width:2px;height:28px;background:linear-gradient(transparent,rgba(220,240,255,.72));transform:rotate(14deg);animation:rainFall linear infinite}
 @keyframes rainFall{to{transform:translate(10vw,120vh) rotate(14deg)}}
-#globalWind{opacity:0}.has-wind #globalWind{opacity:1}
+#globalWind{opacity:0}.has-wind #globalWind{opacity:.55}
 .wind-line{position:absolute;height:3px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);transform:rotate(-12deg);animation:windRun linear infinite}
 @keyframes windRun{from{left:-35vw;opacity:0}12%{opacity:1}88%{opacity:1}to{left:110vw;opacity:0}}
 #globalVortex{inset:50% auto auto 50%;width:min(110vw,110vh);height:min(110vw,110vh);transform:translate(-50%,-50%);opacity:0;filter:drop-shadow(0 0 24px rgba(180,220,255,.22));transition:opacity .5s ease}
-.has-wind #globalVortex{opacity:1}
+.has-wind #globalVortex{opacity:.5}
 .vortex-svg{width:100%;height:100%;overflow:visible;animation:vortexSpin 10s linear infinite}
 .vortex-svg path{fill:none;stroke-linecap:round;filter:drop-shadow(0 0 8px rgba(255,255,255,.55))}
 .vortex-outer{stroke:rgba(205,232,255,.42);stroke-width:2.5;stroke-dasharray:18 12}
@@ -29,13 +29,13 @@ body.theme-normal{background:#16213e}body.theme-yellow{background:#827500}body.t
 .vortex-inner{stroke:rgba(255,255,255,.78);stroke-width:4.5;stroke-dasharray:48 13}
 .has-t1 .vortex-svg{animation-duration:18s;opacity:.42}.has-t3 .vortex-svg{animation-duration:13s;opacity:.58}.has-t8 .vortex-svg{animation-duration:8s}.has-t10 .vortex-svg{animation:vortexSpinFast 2.2s linear infinite;opacity:1}.has-t10 #globalWind .wind-line{height:5px}@keyframes vortexSpinFast{to{transform:rotate(360deg)}}
 @keyframes vortexSpin{to{transform:rotate(360deg)}}
-#globalSnow{opacity:0}.has-snow #globalSnow{opacity:1}
+#globalSnow{opacity:0}.has-snow #globalSnow{opacity:.55}
 .snow-flake{position:absolute;top:-10vh;color:rgba(232,247,255,.88);text-shadow:0 0 8px rgba(220,245,255,.72);font-size:clamp(12px,2vw,26px);animation:snowFall linear infinite}
 @keyframes snowFall{0%{transform:translate3d(0,-10vh,0) rotate(0deg);opacity:0}12%{opacity:1}100%{transform:translate3d(var(--drift),115vh,0) rotate(480deg);opacity:.2}}
 #globalLightningSvg{position:fixed;inset:0;width:100%;height:100%;opacity:0;z-index:9;transition:opacity .45s ease-out}
 #flashPrimary,#flashSecondary{position:fixed;inset:0;background:#fff;opacity:0;z-index:10;pointer-events:none}
 #flashSecondary{background:rgba(224,236,255,.76);z-index:8}
-.has-thunder #globalLightningSvg{opacity:.92}
+.has-thunder #globalLightningSvg{opacity:.7}
 #alertGlow{position:fixed;inset:0;border:0 solid transparent;pointer-events:none;z-index:12;opacity:0}
 .has-stay-home #alertGlow{opacity:1;border-width:9px;animation:alertGlow 2.4s ease-in-out infinite}
 .theme-black #alertGlow{border-color:rgba(210,220,255,.48)}.theme-typhoon #alertGlow{border-color:rgba(255,80,70,.54)}
@@ -49,7 +49,7 @@ body.theme-normal{background:#16213e}body.theme-yellow{background:#827500}body.t
 .dashboard-shell{position:relative;z-index:20;width:100%;height:100%;padding:clamp(18px,3vw,42px);padding-bottom:clamp(50px,8vh,78px);display:flex;align-items:stretch;justify-content:center}
 .dashboard-grid{width:100%;height:100%;display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-template-rows:repeat(var(--rows),minmax(0,1fr));gap:var(--gap);min-width:0;min-height:0}
 .slot{min-width:0;min-height:0;overflow:visible;position:relative;border:1px solid rgba(124,196,255,.22);border-radius:var(--radius);background:var(--panel);background-image:radial-gradient(130% 100% at 50% 0%,rgba(124,196,255,.12),transparent 55%),linear-gradient(180deg,rgba(255,255,255,.10),rgba(6,12,26,.16));box-shadow:0 20px 44px rgba(0,0,0,.34),0 1px 0 rgba(255,255,255,.16),inset 0 1px 0 rgba(255,255,255,.10),inset 0 -18px 24px rgba(0,0,0,.22);backdrop-filter:blur(10px) saturate(145%);-webkit-backdrop-filter:blur(10px) saturate(145%);padding:clamp(12px,2vw,24px);display:flex;flex-direction:column;transition:transform .25s cubic-bezier(.2,.7,.2,1),box-shadow .25s ease,border-color .25s ease}.slot-top{transition:opacity .55s ease,transform .55s ease;z-index:1;position:relative}.slot.chrome-hidden .slot-top{opacity:0;transform:translateY(-8px);pointer-events:none}.glass-overlay{position:absolute;inset:0;border-radius:var(--radius);background-image:radial-gradient(130% 100% at 50% 0%,rgba(124,196,255,.10),transparent 55%),linear-gradient(180deg,rgba(255,255,255,.06),rgba(6,12,26,.08));box-shadow:inset 0 1px 0 rgba(255,255,255,.10),inset 0 -18px 24px rgba(0,0,0,.16);backdrop-filter:blur(10px) saturate(145%);-webkit-backdrop-filter:blur(10px) saturate(145%);pointer-events:none;z-index:0}
-.slot.widget-size-small .widget-body{z-index:1;position:relative}{font-size:.86em}.slot.widget-size-medium .widget-body{z-index:1;position:relative}{font-size:1em}.slot.widget-size-large .widget-body{z-index:1;position:relative}{font-size:1.14em}.slot.widget-size-small .clock-time{font-size:clamp(1.7rem,5vw,4.8rem)}.slot.widget-size-medium .clock-time{font-size:clamp(2.1rem,6.8vw,6.8rem)}.slot.widget-size-large .clock-time{font-size:clamp(2.8rem,9vw,9.5rem)}.slot.widget-size-small .weather-icon{width:clamp(56px,9vw,120px);height:clamp(56px,9vw,120px)}.slot.widget-size-large .weather-icon{width:clamp(82px,14vw,190px);height:clamp(82px,14vw,190px)}.slot.widget-size-small .weather-temp{font-size:clamp(1.9rem,4.8vw,4.6rem)}.slot.widget-size-large .weather-temp{font-size:clamp(2.8rem,7vw,6.8rem)}
+.slot.widget-size-small .widget-body{z-index:1;position:relative;justify-content:center}{font-size:.86em}.slot.widget-size-medium .widget-body{z-index:1;position:relative;justify-content:center}{font-size:1em}.slot.widget-size-large .widget-body{z-index:1;position:relative;justify-content:center}{font-size:1.14em}.slot.widget-size-small .clock-time{font-size:clamp(1.7rem,5vw,4.8rem)}.slot.widget-size-medium .clock-time{font-size:clamp(2.1rem,6.8vw,6.8rem)}.slot.widget-size-large .clock-time{font-size:clamp(2.8rem,9vw,9.5rem)}.slot.widget-size-small .weather-icon{width:clamp(56px,9vw,120px);height:clamp(56px,9vw,120px)}.slot.widget-size-large .weather-icon{width:clamp(82px,14vw,190px);height:clamp(82px,14vw,190px)}.slot.widget-size-small .weather-temp{font-size:clamp(1.9rem,4.8vw,4.6rem)}.slot.widget-size-large .weather-temp{font-size:clamp(2.8rem,7vw,6.8rem)}
 .slot.empty{align-items:center;justify-content:center;border-style:dashed;background:rgba(255,255,255,.03)}
 .slot-top{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:.74rem;letter-spacing:.7px;margin-bottom:9px;flex:0 0 auto}
 .slot-actions{display:flex;gap:5px}.slot-actions button,.mini-button{border:1px solid var(--line);background:rgba(255,255,255,.08);color:inherit;border-radius:7px;padding:5px 8px;font-size:.72rem;cursor:pointer;transition:background .18s ease,transform .12s ease,border-color .18s ease,box-shadow .18s ease}.slot-actions button:hover,.mini-button:hover{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.28)}.slot-actions button:active,.mini-button:active{transform:translateY(1px) scale(.96);background:rgba(255,255,255,.22)}.slot-actions button:disabled,.mini-button:disabled{opacity:.4;cursor:not-allowed}.slot-actions button:focus-visible,.mini-button:focus-visible{outline:2px solid var(--ring);outline-offset:2px}.
@@ -109,7 +109,7 @@ body.theme-normal{background:#16213e}body.theme-yellow{background:#827500}body.t
 
 <main class="dashboard-shell"><section id="dashboardGrid" class="dashboard-grid"></section></main>
 <div id="swtTicker" aria-live="polite"></div>
-<div id="lastUpdate">Last Update: Loading</div><div id="versionStamp">v0.2.4-fix</div>
+<div id="lastUpdate">Last Update: Loading</div><div id="versionStamp">v0.2.5</div>
 <button id="toggleBtn" onclick="toggleSettings()">...</button>
 
 <aside id="settingsPanel">
@@ -730,7 +730,7 @@ function updateStatusLabels(){
   const el=document.getElementById('lastUpdate');
   if(el)el.textContent=(config.language==='en'?'Last Update: ':'最後更新：')+(liveData.updatedAt?liveData.updatedAt.toLocaleTimeString(config.language==='en'?'en-GB':'zh-Hant-HK',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}):'---');
   const vs=document.getElementById('versionStamp');
-  if(vs)vs.textContent='v0.2.4-fix';
+  if(vs)vs.textContent='v0.2.5';
   const swt=document.getElementById('swtTicker');
   let info = liveData.swt.length ? liveData.swt.join(' | ') : '';
   if(liveData.warningRecords && liveData.warningRecords.length > 0){
