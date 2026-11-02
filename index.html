@@ -13,7 +13,7 @@ body.theme-normal{background:#16213e}body.theme-yellow{background:#827500}body.t
 @keyframes hotPulse{50%{background:#bd3d0d}}
 
 /* 全螢幕天氣特效 */
-.global-layer{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:2}
+.global-layer{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:25}
 #globalRain{opacity:0}.has-rain #globalRain{opacity:1}
 .rain-drop{position:absolute;top:-12vh;width:2px;height:28px;background:linear-gradient(transparent,rgba(220,240,255,.72));transform:rotate(14deg);animation:rainFall linear infinite}
 @keyframes rainFall{to{transform:translate(10vw,120vh) rotate(14deg)}}
@@ -87,7 +87,7 @@ body.theme-normal{background:#16213e}body.theme-yellow{background:#827500}body.t
 .nested-row{display:flex;gap:6px;margin-bottom:7px}.nested-row>*{min-width:0;flex:1}.search-results{max-height:150px;overflow:auto;display:flex;flex-direction:column;gap:4px}.search-results button{text-align:left;border:1px solid var(--line);background:rgba(255,255,255,.06);color:inherit;border-radius:6px;padding:6px;font-size:.75rem;cursor:pointer}.search-results button:hover{background:rgba(255,255,255,.18)}.favorite-list{display:flex;flex-direction:column;gap:5px;margin:8px 0}.favorite-list button{text-align:left}.eta-list{margin-top:10px;display:flex;flex-direction:column;gap:5px}.eta-row{display:flex;justify-content:space-between;gap:10px;padding:6px 8px;background:rgba(0,0,0,.18);border-radius:6px;font-size:.78rem}.eta-row strong{color:#ffe57c}.bus-status{font-size:.75rem;color:var(--muted);margin-top:7px;line-height:1.5}.mtr-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:3px 0 9px;padding-bottom:7px;border-bottom:1px solid rgba(255,255,255,.14)}.mtr-line-badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 7px;border:1px solid rgba(255,255,255,.3);box-shadow:0 2px 6px rgba(0,0,0,.18);font-size:.68rem;font-weight:750;letter-spacing:.25px;white-space:nowrap}.mtr-station{min-width:0;font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}.mtr-directions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;min-height:0}.mtr-direction{min-width:0;padding:7px;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(0,0,0,.15)}.mtr-direction-title{font-size:.69rem;color:var(--muted);padding-bottom:5px;margin-bottom:4px;border-bottom:1px solid rgba(255,255,255,.1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mtr-row{display:flex;align-items:center;justify-content:space-between;gap:5px;padding:5px 0;font-size:.72rem}.mtr-row+.mtr-row{border-top:1px solid rgba(255,255,255,.08)}.mtr-dest{min-width:0;line-height:1.22;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mtr-platform{color:var(--muted);font-size:.62rem}.mtr-row strong{color:#ffe57c;white-space:nowrap;font-size:.72rem}.mtr-alert{padding:9px;border-radius:8px;background:rgba(130,20,20,.28);font-size:.75rem;line-height:1.45;color:#ffd4d4}.slot.widget-size-small .mtr-directions{gap:5px}.slot.widget-size-small .mtr-direction{padding:5px}.slot.widget-size-small .mtr-row{font-size:.63rem;padding:4px 0}.slot.widget-size-small .mtr-row strong{font-size:.63rem}.slot.widget-size-small .mtr-station{font-size:.66rem}
 
 /* 頁面標籤 */
-#lastUpdate{position:fixed;right:10px;bottom:7px;z-index:80;color:rgba(255,255,255,.53);font-size:.68rem;letter-spacing:.3px;pointer-events:none;text-shadow:0 1px 3px #000}}#versionStamp{position:fixed;left:10px;bottom:20px;z-index:80;color:rgba(255,255,255,.53);font-size:.68rem;font-family:ui-monospace,monospace;user-select:none;letter-spacing:.5px}
+#lastUpdate{position:fixed;right:10px;bottom:7px;z-index:80;color:rgba(255,255,255,.53);font-size:.68rem;letter-spacing:.3px;pointer-events:none;text-shadow:0 1px 3px #000}}#versionStamp{position:fixed;left:50%;transform:translateX(-50%);bottom:7px;z-index:80;color:rgba(255,255,255,.53);font-size:.68rem;font-family:ui-monospace,monospace;user-select:none;letter-spacing:.5px}
 #swtTicker{position:fixed;left:10px;bottom:7px;z-index:80;max-width:58vw;color:rgba(255,255,255,.63);font-size:.68rem;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;text-shadow:0 1px 3px #000}
 
 /* 設定面板 */
@@ -109,7 +109,7 @@ body.theme-normal{background:#16213e}body.theme-yellow{background:#827500}body.t
 
 <main class="dashboard-shell"><section id="dashboardGrid" class="dashboard-grid"></section></main>
 <div id="swtTicker" aria-live="polite"></div>
-<div id="lastUpdate">Last Update: Loading</div><div id="versionStamp">v0.2.2-surface</div>
+<div id="lastUpdate">Last Update: Loading</div><div id="versionStamp">v0.2.3-fix</div>
 <button id="toggleBtn" onclick="toggleSettings()">...</button>
 
 <aside id="settingsPanel">
@@ -730,7 +730,7 @@ function updateStatusLabels(){
   const el=document.getElementById('lastUpdate');
   if(el)el.textContent=(config.language==='en'?'Last Update: ':'最後更新：')+(liveData.updatedAt?liveData.updatedAt.toLocaleTimeString(config.language==='en'?'en-GB':'zh-Hant-HK',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}):'---');
   const vs=document.getElementById('versionStamp');
-  if(vs)vs.textContent='v0.2.2-surface';
+  if(vs)vs.textContent='v0.2.3-fix';
   const swt=document.getElementById('swtTicker');
   let info = liveData.swt.length ? liveData.swt.join(' | ') : '';
   if(liveData.warningRecords && liveData.warningRecords.length > 0){
