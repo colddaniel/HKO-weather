@@ -726,6 +726,8 @@ function updateDataPreview(){
 function updateStatusLabels(){
   const el=document.getElementById('lastUpdate');
   if(el)el.textContent=(config.language==='en'?'Last Update: ':'最後更新：')+(liveData.updatedAt?liveData.updatedAt.toLocaleTimeString(config.language==='en'?'en-GB':'zh-Hant-HK',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}):'---');
+  const vs=document.getElementById('versionStamp');
+  if(vs)vs.textContent='v0.2.2-surface';
   const swt=document.getElementById('swtTicker');
   let info = liveData.swt.length ? liveData.swt.join(' | ') : '';
   if(liveData.warningRecords && liveData.warningRecords.length > 0){
