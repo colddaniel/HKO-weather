@@ -5,530 +5,143 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Hong Kong Weather Dashboard</title>
 <style>
-/* === Design Tokens === */
-:root {
-  --gap: 14px;
-  --radius: 16px;
-  --radius-sm: 8px;
-
-  /* Base palette - deep navy with warm neutrals */
-  --bg: #0b1120;
-  --fg: #e8edf5;
-  --muted: #7a8db5;
-  --border: rgba(255,255,255,0.10);
-  --line: rgba(255,255,255,0.14);
-  --surface: rgba(15,23,42,0.60);
-  --surface-hover: rgba(20,30,55,0.75);
-  --accent: #6ba3d9;
-  --accent-glow: rgba(107,163,217,0.25);
-  --warn: #f5c542;
-  --warn-bg: rgba(245,197,66,0.10);
-  --danger: #d95a5a;
-  --danger-bg: rgba(217,90,90,0.10);
-  --success: #5ab97a;
-}
-
-/* === Reset === */
+:root{--gap:12px;--radius:22px;--background:#0a1128;--foreground:#f4f7fd;--muted:#c6d2ea;--muted-foreground:#c6d2ea;--border:rgba(255,255,255,.16);--line:rgba(255,255,255,.18);--panel:rgba(12,20,44,.16);--panel-2:rgba(9,15,32,.88);--card:rgba(8,14,30,.5);--card-foreground:#eef2fb;--primary:#3b82f6;--primary-foreground:#fff;--accent:#7cc4ff;--accent-foreground:#08112b;--ring:rgba(122,196,255,.85);--destructive:#b43636;--destructive-foreground:#ffe0e0;--warn:#ffe57a}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;overflow:hidden}
-body{
-  font-family: "SF Pro Display","SF Pro","Segoe UI","Noto Sans HK","PingFang SC",system-ui,sans-serif;
-  color:var(--fg);
-  background:var(--bg);
-  -webkit-font-smoothing:antialiased;
-  text-rendering:optimizeLegibility;
-  transition:background .6s ease;
-}
+body{font-family:"Segoe UI","Microsoft JhengHei","PingFang SC","Noto Sans HK","Noto Sans TC",system-ui,sans-serif;color:var(--foreground);background:radial-gradient(120% 90% at 18% -12%,rgba(66,100,170,.34),transparent 60%),radial-gradient(120% 80% at 104% 110%,rgba(42,66,128,.32),transparent 55%),var(--background);transition:background .7s,color .3s;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body.theme-normal{background:#16213e}body.theme-yellow{background:#827500}body.theme-red{background:#7d1518}body.theme-black{background:#07080c}body.theme-thunder{background:#332052}body.theme-typhoon{background:#092f70}body.theme-hot{background:#7c2108;animation:hotPulse 3s ease-in-out infinite}body.theme-cold{background:#0a1c45}
+@keyframes hotPulse{50%{background:#bd3d0d}}
 
-/* === Background Themes (weather-based) === */
-body.theme-normal{background:#0f1929}
-body.theme-yellow{background:#2a2510}
-body.theme-red{background:#2a1215}
-body.theme-black{background:#06070a}
-body.theme-thunder{background:#18122a}
-body.theme-typhoon{background:#0c1e45}
-body.theme-hot{background:#2a1508;animation:hotPulse 4s ease-in-out infinite}
-body.theme-cold{background:#0c1830}
-@keyframes hotPulse{50%{background:#3a1a0d}}
-
-/* === Global Weather Effects === */
-.global-layer{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:1}
-
-/* Rain */
-#globalRain{opacity:0}.has-rain #globalRain{opacity:1}
-.rain-drop{position:absolute;top:-12vh;width:2px;height:24px;
-  background:linear-gradient(transparent,rgba(180,210,240,0.55));
-  transform:rotate(12deg);animation:rainFall linear infinite}
-@keyframes rainFall{to{transform:translate(8vw,120vh) rotate(12deg)}}
-
-/* Wind (typhoon vortex) */
-#globalWind{opacity:0}.has-wind #globalWind{opacity:1}
-.wind-line{position:absolute;height:2px;
-  background:linear-gradient(90deg,transparent,rgba(200,220,240,0.35),transparent);
-  transform:rotate(-10deg);animation:windRun linear infinite}
-@keyframes windRun{from{left:-30vw;opacity:0}10%{opacity:1}85%{opacity:1}to{left:110vw;opacity:0}}
-
-/* Vortex SVG */
-#globalVortex{
-  inset:50% auto auto 50%;width:min(100vw,100vh);height:min(100vw,100vh);
-  transform:translate(-50%,-50%);opacity:0;
-  filter:drop-shadow(0 0 20px rgba(150,200,240,0.15));transition:opacity .5s ease
-}
-.has-wind #globalVortex{opacity:1}
+/* 全螢幕天氣特效 */
+.global-layer{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:25}
+#globalRain{opacity:0}.has-rain #globalRain{opacity:.45}
+.rain-drop{position:absolute;top:-12vh;width:2px;height:28px;background:linear-gradient(transparent,rgba(220,240,255,.72));transform:rotate(14deg);animation:rainFall linear infinite}
+@keyframes rainFall{to{transform:translate(10vw,120vh) rotate(14deg)}}
+#globalWind{opacity:0}.has-wind #globalWind{opacity:.55}
+.wind-line{position:absolute;height:3px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);transform:rotate(-12deg);animation:windRun linear infinite}
+@keyframes windRun{from{left:-35vw;opacity:0}12%{opacity:1}88%{opacity:1}to{left:110vw;opacity:0}}
+#globalVortex{inset:50% auto auto 50%;width:min(110vw,110vh);height:min(110vw,110vh);transform:translate(-50%,-50%);opacity:0;filter:drop-shadow(0 0 24px rgba(180,220,255,.22));transition:opacity .5s ease}
+.has-wind #globalVortex{opacity:.5}
 .vortex-svg{width:100%;height:100%;overflow:visible;animation:vortexSpin 10s linear infinite}
-.vortex-svg path{fill:none;stroke-linecap:round;filter:drop-shadow(0 0 6px rgba(200,220,240,0.4))}
-.vortex-outer{stroke:rgba(180,215,245,0.35);stroke-width:2;stroke-dasharray:16 10}
-.vortex-arm{stroke:rgba(200,225,245,0.55);stroke-width:3;stroke-dasharray:80 20}
-.vortex-inner{stroke:rgba(220,240,255,0.7);stroke-width:4;stroke-dasharray:44 12}
-.has-t1 .vortex-svg{animation-duration:18s;opacity:.35}
-.has-t3 .vortex-svg{animation-duration:13s;opacity:.50}
-.has-t8 .vortex-svg{animation-duration:8s}
-.has-t10 .vortex-svg{animation:vortexSpinFast 2s linear infinite;opacity:.85}
-.has-t10 #globalWind .wind-line{height:4px}
-@keyframes vortexSpinFast{to{transform:rotate(360deg)}}
+.vortex-svg path{fill:none;stroke-linecap:round;filter:drop-shadow(0 0 8px rgba(255,255,255,.55))}
+.vortex-outer{stroke:rgba(205,232,255,.42);stroke-width:2.5;stroke-dasharray:18 12}
+.vortex-arm{stroke:rgba(224,242,255,.62);stroke-width:3.5;stroke-dasharray:88 22}
+.vortex-inner{stroke:rgba(255,255,255,.78);stroke-width:4.5;stroke-dasharray:48 13}
+.has-t1 .vortex-svg{animation-duration:18s;opacity:.42}.has-t3 .vortex-svg{animation-duration:13s;opacity:.58}.has-t8 .vortex-svg{animation-duration:8s}.has-t10 .vortex-svg{animation:vortexSpinFast 2.2s linear infinite;opacity:1}.has-t10 #globalWind .wind-line{height:5px}@keyframes vortexSpinFast{to{transform:rotate(360deg)}}
 @keyframes vortexSpin{to{transform:rotate(360deg)}}
+#globalSnow{opacity:0}.has-snow #globalSnow{opacity:.55}
+.snow-flake{position:absolute;top:-10vh;color:rgba(232,247,255,.88);text-shadow:0 0 8px rgba(220,245,255,.72);font-size:clamp(12px,2vw,26px);animation:snowFall linear infinite}
+@keyframes snowFall{0%{transform:translate3d(0,-10vh,0) rotate(0deg);opacity:0}12%{opacity:1}100%{transform:translate3d(var(--drift),115vh,0) rotate(480deg);opacity:.2}}
+#globalLightningSvg{position:fixed;inset:0;width:100%;height:100%;opacity:0;z-index:9;transition:opacity .45s ease-out}
+#flashPrimary,#flashSecondary{position:fixed;inset:0;background:#fff;opacity:0;z-index:10;pointer-events:none}
+#flashSecondary{background:rgba(224,236,255,.76);z-index:8}
+.has-thunder #globalLightningSvg{opacity:.7}
+#alertGlow{position:fixed;inset:0;border:0 solid transparent;pointer-events:none;z-index:12;opacity:0}
+.has-stay-home #alertGlow{opacity:1;border-width:9px;animation:alertGlow 2.4s ease-in-out infinite}
+.theme-black #alertGlow{border-color:rgba(210,220,255,.48)}.theme-typhoon #alertGlow{border-color:rgba(255,80,70,.54)}
+@keyframes alertGlow{50%{box-shadow:inset 0 0 46px rgba(255,255,255,.25)}}
+#stayHome{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:35;display:none;padding:7px 15px;border-radius:999px;background:rgba(0,0,0,.68);border:1px solid rgba(255,255,255,.42);font-size:.78rem;letter-spacing:1px;box-shadow:0 0 18px rgba(255,255,255,.18)}
+.has-stay-home #stayHome{display:block;animation:badgePulse 2.2s ease-in-out infinite}
 
-/* Snow */
-#globalSnow{opacity:0}.has-snow #globalSnow{opacity:1}
-.snow-flake{position:absolute;top:-10vh;
-  color:rgba(220,235,255,0.80);text-shadow:0 0 6px rgba(200,230,255,0.60);
-  font-size:clamp(10px,1.8vw,22px);animation:snowFall linear infinite}
-@keyframes snowFall{
-  0%{transform:translate3d(0,-10vh,0) rotate(0deg);opacity:0}
-  10%{opacity:1}
-  100%{transform:translate3d(var(--drift),115vh,0) rotate(480deg);opacity:.15}
-}
+/* 儀表板網格 */
+@keyframes badgePulse{0%,100%{opacity:.82}50%{opacity:1}}
+.slot:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.28);box-shadow:0 22px 52px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.14)}.slot:active{transform:translateY(0) scale(.995)}
+.dashboard-shell{position:relative;z-index:20;width:100%;height:100%;padding:clamp(18px,3vw,42px);padding-bottom:clamp(50px,8vh,78px);display:flex;align-items:stretch;justify-content:center}
+.dashboard-grid{width:100%;height:100%;display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-template-rows:repeat(var(--rows),minmax(0,1fr));gap:var(--gap);min-width:0;min-height:0}
+.slot{min-width:0;min-height:0;overflow:visible;position:relative;border:1px solid rgba(124,196,255,.22);border-radius:var(--radius);background:var(--panel);background-image:radial-gradient(130% 100% at 50% 0%,rgba(124,196,255,.12),transparent 55%),linear-gradient(180deg,rgba(255,255,255,.10),rgba(6,12,26,.16));box-shadow:0 20px 44px rgba(0,0,0,.34),0 1px 0 rgba(255,255,255,.16),inset 0 1px 0 rgba(255,255,255,.10),inset 0 -18px 24px rgba(0,0,0,.22);backdrop-filter:blur(10px) saturate(145%);-webkit-backdrop-filter:blur(10px) saturate(145%);padding:clamp(12px,2vw,24px);display:flex;flex-direction:column;transition:transform .25s cubic-bezier(.2,.7,.2,1),box-shadow .25s ease,border-color .25s ease}.slot-top{transition:opacity .55s ease,transform .55s ease;z-index:1;position:relative}.slot.chrome-hidden .slot-top{opacity:0;transform:translateY(-8px);pointer-events:none}.glass-overlay{position:absolute;inset:0;border-radius:var(--radius);background-image:radial-gradient(130% 100% at 50% 0%,rgba(124,196,255,.10),transparent 55%),linear-gradient(180deg,rgba(255,255,255,.06),rgba(6,12,26,.08));box-shadow:inset 0 1px 0 rgba(255,255,255,.10),inset 0 -18px 24px rgba(0,0,0,.16);backdrop-filter:blur(10px) saturate(145%);-webkit-backdrop-filter:blur(10px) saturate(145%);pointer-events:none;z-index:0}
+.slot.widget-size-small .widget-body{z-index:1;position:relative;justify-content:center}{font-size:.86em}.slot.widget-size-medium .widget-body{z-index:1;position:relative;justify-content:center}{font-size:1em}.slot.widget-size-large .widget-body{z-index:1;position:relative;justify-content:center}{font-size:1.14em}.slot.widget-size-small .clock-time{font-size:clamp(1.7rem,5vw,4.8rem)}.slot.widget-size-medium .clock-time{font-size:clamp(2.1rem,6.8vw,6.8rem)}.slot.widget-size-large .clock-time{font-size:clamp(2.8rem,9vw,9.5rem)}.slot.widget-size-small .weather-icon{width:clamp(56px,9vw,120px);height:clamp(56px,9vw,120px)}.slot.widget-size-large .weather-icon{width:clamp(82px,14vw,190px);height:clamp(82px,14vw,190px)}.slot.widget-size-small .weather-temp{font-size:clamp(1.9rem,4.8vw,4.6rem)}.slot.widget-size-large .weather-temp{font-size:clamp(2.8rem,7vw,6.8rem)}
+.slot.empty{align-items:center;justify-content:center;border-style:dashed;background:rgba(255,255,255,.03)}
+.slot-top{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:.74rem;letter-spacing:.7px;margin-bottom:9px;flex:0 0 auto}
+.slot-actions{display:flex;gap:5px}.slot-actions button,.mini-button{border:1px solid var(--line);background:rgba(255,255,255,.08);color:inherit;border-radius:7px;padding:5px 8px;font-size:.72rem;cursor:pointer;transition:background .18s ease,transform .12s ease,border-color .18s ease,box-shadow .18s ease}.slot-actions button:hover,.mini-button:hover{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.28)}.slot-actions button:active,.mini-button:active{transform:translateY(1px) scale(.96);background:rgba(255,255,255,.22)}.slot-actions button:disabled,.mini-button:disabled{opacity:.4;cursor:not-allowed}.slot-actions button:focus-visible,.mini-button:focus-visible{outline:2px solid var(--ring);outline-offset:2px}.
+.widget-body{min-height:0;overflow:auto;display:flex;flex-direction:column;flex:1;justify-content:center}.widget-center{align-items:center;justify-content:center;text-align:center}.slot.top{display:flex;align-items:center;justify-content:center}.slot.widget-size-small .clock-time,.slot.widget-size-medium .clock-time,.slot.widget-size-large .clock-time,.slot.widget-size-small .weather-temp,.slot.widget-size-medium .weather-temp,.slot.widget-size-large .weather-temp{align-self:center}
+.widget-title{font-size:clamp(.85rem,1.3vw,1.1rem);color:var(--muted);margin-bottom:8px}
 
-/* Lightning */
-#globalLightningSvg{position:fixed;inset:0;width:100%;height:100%;opacity:0;z-index:8}
-#flashPrimary,#flashSecondary{position:fixed;inset:0;opacity:0;z-index:9;pointer-events:none}
-#flashSecondary{background:rgba(210,225,245,0.65)}
-.has-thunder #globalLightningSvg{opacity:.85}
+/* 時鐘樣式 */
+.clock-time{font-size:clamp(3.5rem,18vw,22rem);font-weight:750;line-height:.9;letter-spacing:-2px;white-space:nowrap;text-shadow:0 2px 24px rgba(0,0,0,.35)}
+.clock-zone{font-size:.85rem;color:var(--muted);margin-top:12px}
+.font-small .clock-time{font-size:clamp(2rem,10vw,12rem)}
+.font-medium .clock-time{font-size:clamp(3rem,15vw,18rem)}
+.font-large .clock-time{font-size:clamp(4rem,22vw,26rem)}
 
-/* Stay Home / Black Rain banner */
-#stayHome{
-  position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:30;
-  display:none;padding:6px 14px;border-radius:999px;
-  background:rgba(0,0,0,0.60);border:1px solid rgba(255,255,255,0.30);
-  font-size:.72rem;letter-spacing:.8px;
-  box-shadow:0 0 14px rgba(255,255,255,0.12)
-}
-.has-stay-home #stayHome{display:block;animation:badgePulse 2s ease-in-out infinite}
-@keyframes badgePulse{0%,100%{opacity:.75}50%{opacity:1}}
+/* 天氣組件優化排版 */
+.weather-container{display:flex;align-items:center;justify-content:space-between;gap:clamp(8px,2vw,22px);width:100%;height:100%;flex-wrap:nowrap}
+.weather-main-group{display:flex;flex:1 1 64%;min-width:0;flex-direction:row;align-items:center;justify-content:center;gap:clamp(8px,2vw,22px)}
+.weather-icon{width:clamp(64px,11vw,150px);height:clamp(64px,11vw,150px);object-fit:contain;flex:0 0 auto;filter:drop-shadow(0 4px 16px rgba(0,0,0,.35))}
+.weather-temp{font-size:clamp(2rem,5.6vw,5.6rem);font-weight:750;line-height:1;white-space:nowrap}
+.weather-info-group{display:flex;flex:0 1 36%;min-width:0;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left;overflow:hidden}
+.weather-place{color:rgba(255,255,255,.82);font-size:.72rem;line-height:1.25;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.weather-meta-small{color:var(--muted);font-size:.72rem;line-height:1.3;margin-bottom:4px}
+.weather-swt{color:var(--muted);font-size:.68rem;line-height:1.3;margin-top:5px;max-height:2.6em;overflow:hidden}
+.warning-list{line-height:1.5;font-size:.85rem;color:var(--warn);max-height:5.5em;overflow:hidden}
 
-/* === Dashboard Grid === */
-.dashboard-shell{
-  position:relative;z-index:10;width:100%;height:100%;
-  padding:clamp(16px,2.5vw,36px);padding-bottom:clamp(44px,7vh,64px);
-  display:flex;align-items:stretch;justify-content:center;
-}
-.dashboard-grid{
-  width:100%;height:100%;
-  display:grid;
-  grid-template-columns:repeat(var(--cols),minmax(0,1fr));
-  grid-template-rows:repeat(var(--rows),minmax(0,1fr));
-  gap:var(--gap);
-  min-width:0;min-height:0;
-}
+/* 其他組件 */
+.news-item{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.12)}.news-item:last-child{border-bottom:0}.news-time{font-size:.72rem;color:var(--muted);margin-top:4px}.news-carousel{display:flex;flex:1;min-height:0;flex-direction:column;justify-content:center;gap:10px}.news-topic-row{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:.72rem}.news-topic-badge{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;background:rgba(65,150,229,.24);border:1px solid rgba(127,195,255,.3);white-space:nowrap}.news-headline{display:block;color:#fff;text-decoration:none;font-size:clamp(1rem,2.2vw,1.65rem);font-weight:650;line-height:1.4;transition:opacity .35s ease,transform .35s ease}.news-headline:hover{text-decoration:underline}.news-headline.is-fading{opacity:0;transform:translateY(6px)}.news-source{font-size:.68rem;color:var(--muted);line-height:1.45}.news-error{padding:10px;border-radius:8px;background:rgba(130,20,20,.28);font-size:.76rem;line-height:1.5;color:#ffd4d4}.news-loading{font-size:.8rem;color:var(--muted)}.news-progress{height:3px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}.news-progress span{display:block;height:100%;width:100%;transform-origin:left;background:rgba(154,215,255,.78);animation:newsProgress 8s linear infinite}@keyframes newsProgress{from{transform:scaleX(0)}to{transform:scaleX(1)}}.slot.widget-size-small .news-headline{font-size:clamp(.82rem,1.7vw,1.15rem)}.slot.widget-size-large .news-headline{font-size:clamp(1.2rem,2.7vw,2rem)}.forecast-widget-body{overflow-x:hidden;overflow-y:auto;gap:6px;min-height:0;scrollbar-width:thin;scrollbar-color:rgba(180,220,255,.58) rgba(0,0,0,.16)}.forecast-widget-body::-webkit-scrollbar{width:7px}.forecast-widget-body::-webkit-scrollbar-track{background:rgba(0,0,0,.16);border-radius:8px}.forecast-widget-body::-webkit-scrollbar-thumb{background:rgba(180,220,255,.58);border-radius:8px}.forecast-summary{flex:0 0 auto;color:var(--muted);font-size:.78rem;line-height:1.45;margin-bottom:4px;max-height:none;overflow:visible}.forecast-outlook{flex:0 0 auto;font-size:.72rem;line-height:1.35;color:rgba(255,255,255,.72);margin-top:2px;max-height:none;overflow:visible}.forecast-scroll{display:flex;flex:0 0 auto;min-height:96px;height:clamp(96px,38%,170px);align-items:stretch;gap:8px;overflow-x:auto;overflow-y:hidden;padding:2px 0 5px;scroll-snap-type:x proximity;scrollbar-width:thin;scrollbar-color:rgba(180,220,255,.48) rgba(0,0,0,.12)}.forecast-scroll::-webkit-scrollbar{height:7px}.forecast-scroll::-webkit-scrollbar-track{background:rgba(0,0,0,.12);border-radius:8px}.forecast-scroll::-webkit-scrollbar-thumb{background:rgba(180,220,255,.48);border-radius:8px}.forecast-card{flex:0 0 clamp(96px,30%,170px);min-width:0;min-height:0;height:100%;overflow:hidden;padding:7px;border:1px solid rgba(255,255,255,.15);border-radius:10px;background:rgba(0,0,0,.18);scroll-snap-align:start}.forecast-card img{flex:0 0 auto} .forecast-note{flex:0 0 auto} .eta-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:4px 0 8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.14);font-size:.82rem;font-weight:650}.eta-stop{min-width:0;color:var(--muted);font-size:.7rem;font-weight:400;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bus-settings-panel{margin-top:8px}.slot.widget-size-small .eta-heading{font-size:.7rem}.slot.widget-size-small .eta-stop{font-size:.62rem}.slot.widget-size-small .forecast-scroll{min-height:82px;height:106px}.slot.widget-size-small .forecast-card{padding:5px}.slot.widget-size-large .forecast-scroll{height:clamp(112px,42%,190px)}.slot.widget-size-large .forecast-card{padding:9px}
+.slot.widget-size-small .forecast-card{flex:0 0 95px;min-height:0;height:100%;padding:5px}
+	.slot.widget-size-small .forecast-card strong{font-size:0.65rem}
+	.slot.widget-size-small .forecast-card img{width:32px;height:32px}
+	.slot.widget-size-small .forecast-weather{font-size:0.6rem}.forecast-card strong{display:block;font-size:.78rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.forecast-card img{display:block;width:44px;height:44px;object-fit:contain;margin:5px 0;flex-shrink:0}.forecast-weather{font-size:.69rem;line-height:1.25;color:var(--muted);max-height:2.5em;overflow:hidden}.forecast-temp{font-size:.75rem;margin-top:5px;white-space:nowrap}.forecast-rain{font-size:.67rem;color:var(--warn);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.swt-text{white-space:pre-wrap;line-height:1.65;color:var(--muted);font-size:.9rem}
+.choose-title{font-size:1rem;margin-bottom:14px}.choose-grid{display:grid;grid-template-columns:repeat(2,minmax(100px,1fr));gap:8px;width:min(310px,100%)}.choose-grid button{border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.1);color:inherit;padding:12px 8px;cursor:pointer}.choose-grid button:hover{background:rgba(255,255,255,.22)}
+.nested-config{display:none;margin-top:10px;padding:10px;border-radius:10px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.12)}.nested-config.open{display:block}.nested-config h4{font-size:.8rem;color:var(--muted);margin-bottom:7px}
+.clock-select,.widget-select,.bus-control select,.bus-control input,.simulation-controls textarea{width:100%;background:rgba(0,0,0,.28);color:inherit;border:1px solid var(--line);border-radius:7px;padding:7px;font-size:.82rem}
+.nested-row{display:flex;gap:6px;margin-bottom:7px}.nested-row>*{min-width:0;flex:1}.search-results{max-height:150px;overflow:auto;display:flex;flex-direction:column;gap:4px}.search-results button{text-align:left;border:1px solid var(--line);background:rgba(255,255,255,.06);color:inherit;border-radius:6px;padding:6px;font-size:.75rem;cursor:pointer}.search-results button:hover{background:rgba(255,255,255,.18)}.favorite-list{display:flex;flex-direction:column;gap:5px;margin:8px 0}.favorite-list button{text-align:left}.eta-list{margin-top:10px;display:flex;flex-direction:column;gap:5px}.eta-row{display:flex;justify-content:space-between;gap:10px;padding:6px 8px;background:rgba(0,0,0,.18);border-radius:6px;font-size:.78rem}.eta-row strong{color:#ffe57c}.bus-status{font-size:.75rem;color:var(--muted);margin-top:7px;line-height:1.5}.mtr-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:3px 0 9px;padding-bottom:7px;border-bottom:1px solid rgba(255,255,255,.14)}.mtr-line-badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 7px;border:1px solid rgba(255,255,255,.3);box-shadow:0 2px 6px rgba(0,0,0,.18);font-size:.68rem;font-weight:750;letter-spacing:.25px;white-space:nowrap}.mtr-station{min-width:0;font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}.mtr-directions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;min-height:0}.mtr-direction{min-width:0;padding:7px;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(0,0,0,.15)}.mtr-direction-title{font-size:.69rem;color:var(--muted);padding-bottom:5px;margin-bottom:4px;border-bottom:1px solid rgba(255,255,255,.1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mtr-row{display:flex;align-items:center;justify-content:space-between;gap:5px;padding:5px 0;font-size:.72rem}.mtr-row+.mtr-row{border-top:1px solid rgba(255,255,255,.08)}.mtr-dest{min-width:0;line-height:1.22;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mtr-platform{color:var(--muted);font-size:.62rem}.mtr-row strong{color:#ffe57c;white-space:nowrap;font-size:.72rem}.mtr-alert{padding:9px;border-radius:8px;background:rgba(130,20,20,.28);font-size:.75rem;line-height:1.45;color:#ffd4d4}.slot.widget-size-small .mtr-directions{gap:5px}.slot.widget-size-small .mtr-direction{padding:5px}.slot.widget-size-small .mtr-row{font-size:.63rem;padding:4px 0}.slot.widget-size-small .mtr-row strong{font-size:.63rem}.slot.widget-size-small .mtr-station{font-size:.66rem}
 
-/* === Slot / Card Design === */
-.slot{
-  min-width:0;min-height:0;overflow:visible;position:relative;
-  border:1px solid rgba(107,163,217,0.15);
-  border-radius:var(--radius);
-  background:var(--surface);
-  /* Subtle gradient - not excessive glassmorphism */
-  background-image:linear-gradient(165deg,rgba(255,255,255,0.04) 0%,transparent 50%);
-  box-shadow:0 8px 32px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.08);
-  backdrop-filter:blur(8px) saturate(130%);
-  -webkit-backdrop-filter:blur(8px) saturate(130%);
-  padding:clamp(10px,1.8vw,20px);
-  display:flex;flex-direction:column;
-  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
-}
-.slot:hover{
-  transform:translateY(-1px);
-  border-color:rgba(107,163,217,0.30);
-  box-shadow:0 12px 40px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.10);
-}
-.slot:active{transform:translateY(0) scale(0.997)}
+/* 頁面標籤 */
+#lastUpdate{position:fixed;right:10px;bottom:7px;z-index:80;color:rgba(255,255,255,.53);font-size:.68rem;letter-spacing:.3px;pointer-events:none;text-shadow:0 1px 3px #000}#versionStamp{position:fixed;left:10px;bottom:7px;z-index:90;color:rgba(255,255,255,.78);font-size:.68rem;font-family:ui-monospace,monospace;user-select:none;letter-spacing:.5px;text-shadow:0 1px 4px #000}
+#swtTicker{position:fixed;left:10px;bottom:7px;z-index:80;max-width:58vw;color:rgba(255,255,255,.63);font-size:.68rem;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;text-shadow:0 1px 3px #000}
 
-/* Slot chrome (config panel) */
-.slot-top{
-  display:flex;align-items:center;justify-content:space-between;
-  gap:6px;color:var(--muted);font-size:.68rem;letter-spacing:.6px;
-  margin-bottom:7px;flex:0 0 auto;
-  transition:opacity .4s ease,transform .4s ease;
-}
-.slot.chrome-hidden .slot-top{opacity:0;transform:translateY(-6px);pointer-events:none}
+/* 設定面板 */
+#toggleBtn{position:fixed;right:12px;bottom:25px;z-index:1002;border:1px solid var(--border);background:var(--panel-2);backdrop-filter:blur(10px);color:var(--foreground);border-radius:999px;padding:6px 16px;font-size:.9rem;letter-spacing:2px;cursor:pointer;opacity:.82;transition:opacity .2s ease,transform .12s ease}#toggleBtn:hover{opacity:1}#toggleBtn:active{transform:scale(.96)}#toggleBtn:focus-visible{outline:2px solid var(--ring);outline-offset:3px}#toggleBtn:hover{opacity:1}
+#settingsPanel{position:fixed;right:12px;bottom:58px;width:min(410px,calc(100vw - 24px));max-height:min(82vh,720px);overflow:auto;z-index:1001;display:none;padding:15px;border-radius:14px;background:rgba(7,12,26,.92);border:1px solid rgba(255,255,255,.2);box-shadow:0 18px 50px rgba(0,0,0,.4);backdrop-filter:blur(12px)}#settingsPanel.open{display:block}.settings-title{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:10px}.settings-title button{background:none;border:0;color:#fff;font-size:1.1rem;cursor:pointer}.settings-section{padding:10px 0;border-top:1px solid rgba(255,255,255,.12)}.settings-section:first-of-type{border-top:0}.settings-label{font-size:.74rem;color:var(--muted);margin-bottom:7px;letter-spacing:.5px}.settings-buttons{display:flex;flex-wrap:wrap;gap:6px}.settings-buttons button{border:1px solid var(--line);background:rgba(255,255,255,.08);color:#fff;border-radius:7px;padding:7px 9px;font-size:.78rem;cursor:pointer;transition:background .18s ease,transform .12s ease,border-color .18s ease}.settings-buttons button.active{background:var(--primary);border-color:var(--accent);color:var(--primary-foreground)}.settings-buttons button.danger{background:var(--destructive);color:var(--destructive-foreground);border-color:var(--destructive)}.settings-buttons button:focus-visible{outline:2px solid var(--ring);outline-offset:2px}.settings-note{font-size:.72rem;line-height:1.55;color:var(--muted);margin-top:7px}.simulation-controls{display:none}.simulation-controls.open{display:block}.simulation-controls textarea{min-height:74px;resize:vertical}.data-preview{max-height:115px;overflow:auto;white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:.68rem;line-height:1.45;color:#cfe3ff;background:rgba(0,0,0,.2);padding:8px;border-radius:7px}
 
-/* Glass overlay for depth */
-.glass-overlay{
-  position:absolute;inset:0;border-radius:var(--radius);
-  background-image:linear-gradient(165deg,rgba(255,255,255,0.03) 0%,transparent 50%);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,0.06),inset 0 -12px 16px rgba(0,0,0,0.12);
-  pointer-events:none;z-index:0;
-}
-
-/* Widget sizing */
-.slot.widget-size-small .widget-body{font-size:.82em}
-.slot.widget-size-medium .widget-body{font-size:1em}
-.slot.widget-size-large .widget-body{font-size:1.12em}
-.slot.widget-size-small .clock-time{font-size:clamp(1.5rem,4.5vw,4.2rem)}
-.slot.widget-size-medium .clock-time{font-size:clamp(1.9rem,6vw,6.2rem)}
-.slot.widget-size-large .clock-time{font-size:clamp(2.5rem,8vw,8.5rem)}
-.slot.widget-size-small .weather-icon{width:clamp(48px,8vw,100px);height:clamp(48px,8vw,100px)}
-.slot.widget-size-large .weather-icon{width:clamp(72px,12vw,160px);height:clamp(72px,12vw,160px)}
-.slot.widget-size-small .weather-temp{font-size:clamp(1.6rem,4vw,3.8rem)}
-.slot.widget-size-large .weather-temp{font-size:clamp(2.3rem,6vw,5.8rem)}
-
-/* Empty slot */
-.slot.empty{
-  align-items:center;justify-content:center;
-  border-style:dashed;background:rgba(255,255,255,0.02);
-}
-
-/* === Widget Components === */
-.widget-body{min-height:0;overflow:auto;display:flex;flex-direction:column;flex:1}
-.widget-center{align-items:center;justify-content:center;text-align:center}
-.widget-title{font-size:clamp(.78rem,1.1vw,1rem);color:var(--muted);margin-bottom:6px;letter-spacing:.4px;text-transform:uppercase;font-weight:600}
-
-/* Clock */
-.clock-time{
-  font-size:clamp(3rem,16vw,20rem);font-weight:700;
-  line-height:.9;letter-spacing:-1.5px;white-space:nowrap;
-  text-shadow:0 1px 18px rgba(0,0,0,0.30);
-  font-variant-numeric:tabular-nums;
-}
-.clock-zone{font-size:.78rem;color:var(--muted);margin-top:10px;line-height:1.4}
-.font-small .clock-time{font-size:clamp(1.8rem,9vw,11rem)}
-.font-medium .clock-time{font-size:clamp(2.7rem,14vw,16rem)}
-.font-large .clock-time{font-size:clamp(3.8rem,20vw,24rem)}
-
-/* Weather widget */
-.weather-container{
-  display:flex;align-items:stretch;justify-content:space-between;
-  gap:clamp(8px,2vw,20px);width:100%;height:100%;flex-wrap:nowrap;
-}
-.weather-main-group{
-  display:flex;flex:1 1 62%;min-width:0;
-  flex-direction:row;align-items:center;justify-content:center;
-  gap:clamp(8px,2vw,20px);
-}
-.weather-icon{
-  width:clamp(56px,10vw,130px);height:clamp(56px,10vw,130px);
-  object-fit:contain;flex:0 0 auto;
-  filter:drop-shadow(0 3px 12px rgba(0,0,0,0.30));
-}
-.weather-temp{
-  font-size:clamp(1.8rem,5vw,5rem);font-weight:700;line-height:1;
-  white-space:nowrap;font-variant-numeric:tabular-nums;
-}
-.weather-info-group{
-  display:flex;flex:0 1 38%;min-width:0;
-  flex-direction:column;align-items:flex-start;justify-content:center;
-  text-align:left;overflow:hidden;
-}
-.weather-place{color:rgba(255,255,255,0.75);font-size:.66rem;line-height:1.25;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.weather-meta{color:var(--muted);font-size:.64rem;line-height:1.3;margin-bottom:3px}
-.weather-swt{color:var(--muted);font-size:.62rem;line-height:1.3;margin-top:4px;max-height:2.4em;overflow:hidden}
-
-/* Warning list - color coded */
-.warning-list{
-  line-height:1.5;font-size:.78rem;
-  color:var(--warn);
-  background:var(--warn-bg);
-  border-radius:var(--radius-sm);
-  padding:5px 8px;
-  max-height:5em;overflow:hidden;
-}
-.warning-list strong{color:var(--warn)}
-
-/* === MTR Widget === */
-.mtr-summary{
-  display:flex;align-items:center;justify-content:space-between;
-  gap:6px;margin:2px 0 7px;padding-bottom:6px;
-  border-bottom:1px solid rgba(255,255,255,0.10);
-}
-.mtr-line-badge{
-  display:inline-flex;align-items:center;
-  border-radius:999px;padding:2px 6px;
-  font-size:.62rem;font-weight:700;letter-spacing:.2px;white-space:nowrap;
-}
-.mtr-station{min-width:0;font-size:.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
-.mtr-directions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;min-height:0}
-.mtr-direction{min-width:0;padding:6px;border-radius:8px;background:rgba(0,0,0,0.12)}
-.mtr-direction-title{font-size:.64rem;color:var(--muted);padding-bottom:4px;margin-bottom:3px;border-bottom:1px solid rgba(255,255,255,0.08);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mtr-row{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:4px 0;font-size:.68rem}
-.mtr-row+.mtr-row{border-top:1px solid rgba(255,255,255,0.06)}
-.mtr-eta{font-size:.70rem;font-weight:600;color:var(--warn)}
-.bus-status{font-size:.70rem;color:var(--muted);margin-top:5px;line-height:1.5}
-
-/* === Bus Widget === */
-.eta-list{margin-top:8px;display:flex;flex-direction:column;gap:4px}
-.eta-heading{display:flex;justify-content:space-between;gap:8px;margin-bottom:5px;font-size:.72rem;color:var(--fg)}
-.eta-stop{color:var(--muted);font-size:.64rem}
-.eta-row{
-  display:flex;justify-content:space-between;gap:8px;
-  padding:5px 7px;background:rgba(0,0,0,0.12);border-radius:6px;font-size:.72rem;
-}
-.eta-row strong{color:var(--warn);font-weight:600}
-.favorite-list{display:flex;flex-direction:column;gap:4px;margin:6px 0}
-
-/* === News Widget === */
-.news-carousel{display:flex;flex:1;min-height:0;flex-direction:column;justify-content:center;gap:8px}
-.news-topic-row{display:flex;align-items:center;justify-content:space-between;gap:6px;color:var(--muted);font-size:.66rem}
-.news-topic-badge{display:inline-flex;align-items:center;padding:2px 6px;border-radius:999px;background:rgba(107,163,217,0.18);border:1px solid rgba(107,163,217,0.25)}
-.news-headline{display:block;color:var(--fg);text-decoration:none;font-size:clamp(.88rem,1.8vw,1.45rem);font-weight:550;line-height:1.35;transition:opacity .3s ease,transform .3s ease}
-.news-headline:hover{text-decoration:underline}
-.news-headline.is-fading{opacity:0;transform:translateY(5px)}
-.news-time{font-size:.62rem;color:var(--muted);margin-top:3px}
-.news-source{font-size:.60rem;color:var(--muted);line-height:1.4}
-.news-error{padding:8px;border-radius:6px;background:var(--danger-bg);font-size:.70rem;line-height:1.4;color:var(--danger)}
-.news-loading{font-size:.74rem;color:var(--muted)}
-.news-progress{height:2px;border-radius:2px;background:rgba(255,255,255,0.08);overflow:hidden}
-.news-progress span{display:block;height:100%;width:100%;transform-origin:left;background:var(--accent);animation:newsProgress 8s linear infinite}
-@keyframes newsProgress{from{transform:scaleX(0)}to{transform:scaleX(1)}}
-.slot.widget-size-small .news-headline{font-size:clamp(.76rem,1.5vw,1.05rem)}
-.slot.widget-size-large .news-headline{font-size:clamp(1.05rem,2.4vw,1.8rem)}
-
-/* === Forecast Widget === */
-.forecast-widget-body{
-  overflow-x:auto;overflow-y:auto;gap:5px;min-height:0;
-  scrollbar-width:thin;scrollbar-color:rgba(150,190,230,0.45) rgba(0,0,0,0.12);
-}
-.forecast-widget-body::-webkit-scrollbar{width:6px}
-.forecast-widget-body::-webkit-scrollbar-track{background:rgba(0,0,0,0.12);border-radius:6px}
-.forecast-widget-body::-webkit-scrollbar-thumb{background:rgba(150,190,230,0.45);border-radius:6px}
-.forecast-summary{flex:0 0 auto;color:var(--muted);font-size:.72rem;line-height:1.45}
-.forecast-scroll{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px}
-.forecast-card{
-  flex:0 0 88px;min-height:0;height:100%;padding:4px 5px;
-  display:flex;flex-direction:column;align-items:center;text-align:center;
-  border-radius:8px;background:rgba(255,255,255,0.03);
-  border:1px solid rgba(255,255,255,0.06);
-}
-.forecast-card strong{display:block;font-size:.70rem;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.forecast-card img{display:block;width:38px;height:38px;object-fit:contain;margin:4px 0;flex-shrink:0}
-.forecast-weather{font-size:.62rem;line-height:1.2;color:var(--muted);max-height:2.2em;overflow:hidden}
-.forecast-temp{font-size:.68rem;margin-top:4px;white-space:nowrap;font-variant-numeric:tabular-nums}
-.forecast-rain{font-size:.60rem;color:var(--warn);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.slot.widget-size-small .forecast-card{flex:0 0 80px;min-height:0;height:100%;padding:4px}
-.slot.widget-size-small .forecast-card strong{font-size:.58rem}
-.slot.widget-size-small .forecast-card img{width:28px;height:28px}
-.slot.widget-size-small .forecast-weather{font-size:.54rem}
-.forecast-note{font-size:.60rem;color:var(--muted);margin-top:4px}
-
-/* === SWT Ticker (bottom bar) === */
-#swtTicker{
-  position:fixed;left:8px;bottom:6px;z-index:70;
-  max-width:55vw;color:rgba(255,255,255,0.55);font-size:.62rem;
-  letter-spacing:.15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  pointer-events:none;text-shadow:0 1px 2px #000;
-}
-
-/* === Page Labels === */
-#lastUpdate{
-  position:fixed;right:8px;bottom:6px;z-index:70;
-  color:rgba(255,255,255,0.45);font-size:.60rem;letter-spacing:.25px;
-  pointer-events:none;text-shadow:0 1px 2px #000;
-}
-#versionStamp{
-  position:fixed;left:8px;bottom:18px;z-index:70;
-  color:rgba(255,255,255,0.40);font-size:.60rem;
-  font-family:ui-monospace,"SF Mono","Cascadia Code",monospace;
-  user-select:none;letter-spacing:.4px;
-}
-
-/* === Settings Panel === */
-#toggleBtn{
-  position:fixed;right:10px;bottom:22px;z-index:1002;
-  border:1px solid var(--border);background:var(--surface);
-  backdrop-filter:blur(8px);color:var(--fg);
-  border-radius:999px;padding:5px 14px;font-size:.82rem;letter-spacing:1.5px;
-  cursor:pointer;opacity:.75;transition:opacity .15s ease,transform .1s ease;
-}
-#toggleBtn:hover{opacity:1}
-#toggleBtn:active{transform:scale(0.95)}
-#toggleBtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-
-#settingsPanel{
-  position:fixed;right:10px;bottom:52px;
-  width:min(380px,calc(100vw - 20px));max-height:min(80vh,680px);overflow:auto;
-  z-index:1001;display:none;padding:12px;
-  border-radius:12px;
-  background:rgba(8,14,28,0.95);
-  border:1px solid rgba(255,255,255,0.15);
-  box-shadow:0 14px 44px rgba(0,0,0,0.35);
-  backdrop-filter:blur(10px);
-}
-#settingsPanel.open{display:block}
-.settings-title{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:8px}
-.settings-title button{background:none;border:0;color:var(--fg);font-size:1rem;cursor:pointer}
-.settings-section{padding:8px 0;border-top:1px solid rgba(255,255,255,0.10)}
-.settings-section:first-of-type{border-top:0}
-.settings-label{font-size:.68rem;color:var(--muted);margin-bottom:6px;letter-spacing:.4px;text-transform:uppercase}
-.settings-buttons{display:flex;flex-wrap:wrap;gap:5px}
-.settings-buttons button{
-  border:1px solid var(--line);background:rgba(255,255,255,0.06);
-  color:var(--fg);border-radius:6px;padding:5px 8px;font-size:.72rem;
-  cursor:pointer;transition:background .15s ease,transform .1s ease,border-color .15s ease;
-}
-.settings-buttons button:hover{background:rgba(255,255,255,0.15)}
-.settings-buttons button.active{background:var(--accent);border-color:var(--accent);color:#0a1128;font-weight:600}
-.settings-buttons button.danger{background:var(--danger);color:#ffe0e0;border-color:var(--danger)}
-.settings-buttons button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.settings-note{font-size:.64rem;line-height:1.5;color:var(--muted);margin-top:6px}
-
-/* Nested config (per-widget settings) */
-.nested-config{display:none;margin-top:8px;padding:8px;border-radius:8px;background:rgba(0,0,0,0.18);border:1px solid rgba(255,255,255,0.08)}
-.nested-config.open{display:block}
-.nested-config h4{font-size:.72rem;color:var(--muted);margin-bottom:6px}
-
-/* Forms */
-.clock-select,.widget-select,.bus-control select,.bus-control input,.simulation-controls textarea{
-  width:100%;background:rgba(0,0,0,0.25);color:var(--fg);
-  border:1px solid var(--line);border-radius:6px;padding:6px;font-size:.76rem;
-}
-.nested-row{display:flex;gap:5px;margin-bottom:6px}
-.nested-row>*{min-width:0;flex:1}
-.search-results{max-height:140px;overflow:auto;display:flex;flex-direction:column;gap:3px}
-.search-results button{text-align:left;border:1px solid var(--line);background:rgba(255,255,255,0.04);color:var(--fg);border-radius:5px;padding:5px;font-size:.70rem;cursor:pointer}
-.search-results button:hover{background:rgba(255,255,255,0.14)}
-.simulation-controls{display:none}
-.simulation-controls.open{display:block}
-.simulation-controls textarea{min-height:64px;resize:vertical}
-.data-preview{
-  max-height:100px;overflow:auto;white-space:pre-wrap;
-  font-family:ui-monospace,"SF Mono","Cascadia Code",monospace;
-  font-size:.62rem;line-height:1.4;color:#a8c8e8;
-  background:rgba(0,0,0,0.18);padding:6px;border-radius:6px;
-}
-
-/* Widget picker (empty slot) */
-.choose-title{font-size:.88rem;margin-bottom:12px;color:var(--fg)}
-.choose-grid{display:grid;grid-template-columns:repeat(2,minmax(90px,1fr));gap:6px;width:min(280px,100%)}
-.choose-grid button{border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,0.07);color:var(--fg);padding:10px 7px;cursor:pointer;font-size:.72rem;transition:background .15s ease}
-.choose-grid button:hover{background:rgba(255,255,255,0.18)}
-
-/* Mini buttons (inline) */
-.slot-actions button,.mini-button{
-  border:1px solid var(--line);background:rgba(255,255,255,0.06);
-  color:var(--fg);border-radius:5px;padding:4px 7px;font-size:.68rem;
-  cursor:pointer;transition:background .15s ease,transform .1s ease,border-color .15s ease;
-}
-.slot-actions button:hover,.mini-button:hover{background:rgba(255,255,255,0.18);border-color:rgba(255,255,255,0.22)}
-.slot-actions button:active,.mini-button:active{transform:translateY(1px) scale(0.95);background:rgba(255,255,255,0.20)}
-.slot-actions button:disabled,.mini-button:disabled{opacity:.35;cursor:not-allowed}
-.slot-actions button:focus-visible,.mini-button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-
-/* === Responsive Breakpoints === */
-@media(max-width:800px){
-  :root{--gap:8px}
-  .dashboard-shell{padding:8px;padding-bottom:42px}
-  .slot{border-radius:10px;padding:8px}
-  .slot-top{font-size:.62rem}
-  .clock-time{letter-spacing:0}
-  .slot-actions button{padding:3px 5px}
-  .widget-title{font-size:.74rem}
-  .weather-container{gap:10px}
-  .weather-info-group{min-width:100px}
-}
-@media(max-width:600px) and (orientation:portrait){
-  .dashboard-shell{padding:6px;padding-bottom:38px}
-  .slot{padding:7px}
-  .choose-grid{grid-template-columns:repeat(2,1fr)}
-  .weather-container{gap:4px}
-  .weather-main-group{gap:4px;flex-basis:62%}
-  .weather-info-group{flex-basis:38%;min-width:0}
-  .weather-icon{width:clamp(44px,14vw,78px);height:clamp(44px,14vw,78px)}
-  .weather-temp{font-size:clamp(1.4rem,7vw,2.8rem)}
-  .weather-meta,.weather-place{font-size:.58rem}
-  .warning-list{font-size:.62rem}
-}
+@media(max-width:800px){:root{--gap:8px}.dashboard-shell{padding:10px;padding-bottom:48px}.slot{border-radius:12px;padding:10px}.slot-top{font-size:.68rem}.clock-time{letter-spacing:0}.slot-actions button{padding:4px 6px}.widget-title{font-size:.8rem}.weather-container{gap:12px}.weather-info-group{min-width:110px}}
+@media(max-width:600px) and (orientation:portrait){.dashboard-shell{padding:8px;padding-bottom:44px}.slot{padding:9px}.choose-grid{grid-template-columns:repeat(2,1fr)}.weather-container{gap:5px}.weather-main-group{gap:5px;flex-basis:64%}.weather-info-group{flex-basis:36%;min-width:0}.weather-icon{width:clamp(52px,16vw,88px);height:clamp(52px,16vw,88px)}.weather-temp{font-size:clamp(1.7rem,8vw,3.2rem)}.weather-meta-small,.weather-place{font-size:.62rem}.warning-list{font-size:.68rem}}
 </style>
 </head>
 <body class="theme-normal">
-<!-- Global weather effect layers -->
 <div id="globalRain" class="global-layer"></div>
 <div id="globalSnow" class="global-layer"></div>
 <div id="globalWind" class="global-layer"></div>
-<div id="globalVortex" class="global-layer">
-  <svg class="vortex-svg" viewBox="0 0 100 100" aria-hidden="true">
-    <path class="vortex-outer" d="M50 7 C82 7 95 25 91 48 C87 75 63 94 36 88 C12 83 3 61 13 40 C24 17 51 10 72 23 C88 33 84 53 70 65 C53 80 30 73 28 56 C26 42 37 30 51 29 C63 28 72 37 69 48 C67 56 59 61 51 59"/>
-    <path class="vortex-arm" d="M51 59 C43 57 41 50 45 44 C50 36 61 37 65 45 C70 56 62 68 50 71 C32 75 18 60 21 43 C25 22 45 13 64 17"/>
-    <path class="vortex-inner" d="M51 59 C56 57 58 53 57 49 C56 44 51 42 47 45 C41 50 43 59 50 63 C59 68 70 62 74 53"/>
-  </svg>
-</div>
+<div id="globalVortex" class="global-layer"><svg class="vortex-svg" viewBox="0 0 100 100" aria-hidden="true"><path class="vortex-outer" d="M50 7 C82 7 95 25 91 48 C87 75 63 94 36 88 C12 83 3 61 13 40 C24 17 51 10 72 23 C88 33 84 53 70 65 C53 80 30 73 28 56 C26 42 37 30 51 29 C63 28 72 37 69 48 C67 56 59 61 51 59"/><path class="vortex-arm" d="M51 59 C43 57 41 50 45 44 C50 36 61 37 65 45 C70 56 62 68 50 71 C32 75 18 60 21 43 C25 22 45 13 64 17"/><path class="vortex-inner" d="M51 59 C56 57 58 53 57 49 C56 44 51 42 47 45 C41 50 43 59 50 63 C59 68 70 62 74 53"/></svg></div>
 <svg id="globalLightningSvg" aria-hidden="true"></svg>
-<div id="flashPrimary"></div><div id="flashSecondary"></div>
+<div id="flashPrimary"></div><div id="flashSecondary"></div><div id="alertGlow"></div>
 <div id="stayHome"></div>
 
-<!-- Dashboard -->
 <main class="dashboard-shell"><section id="dashboardGrid" class="dashboard-grid"></section></main>
 <div id="swtTicker" aria-live="polite"></div>
-<div id="lastUpdate">Last Update: Loading</div>
-<div id="versionStamp">v1.0.0-refined</div>
+<div id="lastUpdate">Last Update: Loading</div><div id="versionStamp">v0.2.5</div>
 <button id="toggleBtn" onclick="toggleSettings()">...</button>
 
-<!-- Settings Panel -->
 <aside id="settingsPanel">
   <div class="settings-title"><span>Dashboard Settings</span><button onclick="toggleSettings()">×</button></div>
+  <div class="settings-section"><div class="settings-label">語言 / Language</div><div class="settings-buttons"><button id="langTc" onclick="setLanguage('tc')">中文</button><button id="langEn" onclick="setLanguage('en')">English</button></div></div>
   <div class="settings-section">
-    <div class="settings-label">Language</div>
-    <div class="settings-buttons">
-      <button id="langTc" onclick="setLanguage('tc')">中文</button>
-      <button id="langEn" onclick="setLanguage('en')">English</button>
-    </div>
-  </div>
-  <div class="settings-section">
-    <div class="settings-label">Layout</div>
+    <div class="settings-label">版面 / Layout</div>
     <div class="settings-buttons" id="layoutButtons">
-      <button data-layout="auto" onclick="setLayout('auto')">Auto</button>
-      <button data-layout="2x1" onclick="setLayout('2x1')">2×1 Horizontal</button>
-      <button data-layout="1x2" onclick="setLayout('1x2')">1×2 Vertical</button>
-      <button data-layout="2x2" onclick="setLayout('2x2')">2×2 Tablet</button>
-      <button data-layout="3x3" onclick="setLayout('3x3')">3×3 Desktop</button>
+      <button data-layout="auto" onclick="setLayout('auto')">自動/Auto</button><button data-layout="2x1" onclick="setLayout('2x1')">2×1 橫向/Horiz</button><button data-layout="1x2" onclick="setLayout('1x2')">1×2 垂直/Vert</button><button data-layout="2x2" onclick="setLayout('2x2')">2×2 平板/Tablet</button><button data-layout="3x3" onclick="setLayout('3x3')">3×3 大螢幕/Desktop</button>
     </div>
   </div>
   <div class="settings-section">
-    <div class="settings-label">Data Mode</div>
-    <div class="settings-buttons">
-      <button id="liveModeBtn" onclick="setMode('live')">Live (HKO)</button>
-      <button id="simModeBtn" onclick="setMode('simulation')">Simulation</button>
-    </div>
+    <div class="settings-label">資料模式 / Data Mode</div>
+    <div class="settings-buttons"><button id="liveModeBtn" onclick="setMode('live')">Live 天文台/HKO</button><button id="simModeBtn" onclick="setMode('simulation')">Simulation 測試</button></div>
     <div id="simulationControls" class="simulation-controls">
-      <div class="settings-note">These buttons modify simulated data only.</div>
-      <div class="settings-label" style="margin-top:6px">Typhoon Signal</div>
-      <div class="settings-buttons">
-        <button id="simT1" onclick="toggleSimWarning('typhoon','T1')">T1</button>
-        <button id="simT3" onclick="toggleSimWarning('typhoon','T3')">T3</button>
-        <button id="simT8" onclick="toggleSimWarning('typhoon','T8')">T8</button>
-        <button id="simT10" onclick="toggleSimWarning('typhoon','T10')">T10</button>
-      </div>
-      <div class="settings-label" style="margin-top:6px">Rainstorm Warning</div>
-      <div class="settings-buttons">
-        <button id="simAmber" onclick="toggleSimWarning('rain','AMBER')">AMBER</button>
-        <button id="simRed" onclick="toggleSimWarning('rain','RED')">RED</button>
-        <button id="simBlack" onclick="toggleSimWarning('rain','BLACK')">BLACK</button>
-      </div>
-      <div class="settings-label" style="margin-top:6px">Special Weather</div>
-      <div class="settings-buttons">
-        <button id="simThunder" onclick="toggleSimWarning('special','THUNDER')">Thunder</button>
-        <button id="simHot" onclick="toggleSimWarning('special','HOT')">Hot</button>
-        <button id="simCold" onclick="toggleSimWarning('special','COLD')">Cold</button>
-      </div>
-      <div class="settings-label" style="margin-top:6px">SWT Test Text</div>
-      <textarea id="simSwt" placeholder="Special Weather Tips for simulation"></textarea>
-      <button class="mini-button" style="margin-top:4px" onclick="applySimulationSwt()">Apply</button>
-      <div class="settings-label" style="margin-top:6px">HKO Data Snapshot</div>
-      <div id="dataPreview" class="data-preview"></div>
+      <div class="settings-note">下列按鈕會修改「模擬收到的警告資料」。/ These buttons modify simulated data.</div>
+      <div class="settings-label" style="margin-top:8px">颱風信號 / Typhoon</div><div class="settings-buttons"><button id="simT1" onclick="toggleSimWarning('typhoon','T1')">T1</button><button id="simT3" onclick="toggleSimWarning('typhoon','T3')">T3</button><button id="simT8" onclick="toggleSimWarning('typhoon','T8')">T8</button><button id="simT10" onclick="toggleSimWarning('typhoon','T10')">T10</button></div>
+      <div class="settings-label" style="margin-top:8px">暴雨警告 / Rainstorm</div><div class="settings-buttons"><button id="simAmber" onclick="toggleSimWarning('rain','AMBER')">黃雨</button><button id="simRed" onclick="toggleSimWarning('rain','RED')">紅雨</button><button id="simBlack" onclick="toggleSimWarning('rain','BLACK')">黑雨</button></div>
+      <div class="settings-label" style="margin-top:8px">特殊天氣 / Special</div><div class="settings-buttons"><button id="simThunder" onclick="toggleSimWarning('special','THUNDER')">雷暴</button><button id="simHot" onclick="toggleSimWarning('special','HOT')">酷熱</button><button id="simCold" onclick="toggleSimWarning('special','COLD')">寒冷</button></div>
+      <div class="settings-label" style="margin-top:8px">SWT 測試文字</div><textarea id="simSwt" placeholder="模擬的 Special Weather Tips"></textarea><button class="mini-button" style="margin-top:5px" onclick="applySimulationSwt()">套用 SWT</button>
+      <div class="settings-label" style="margin-top:8px">天文台原始資料快照 / HKO Snapshot</div><div id="dataPreview" class="data-preview"></div>
     </div>
   </div>
-  <div class="settings-section">
-    <button class="mini-button danger" onclick="resetDefault()">Reset All</button>
-  </div>
+  <div class="settings-section"><button class="mini-button danger" onclick="resetDefault()">Default 重設所有設定</button></div>
 </aside>
+
+
+  .widget-center{display:flex!important;justify-content:center!important;align-items:center!important;flex-direction:column!important}
+  .clock-time{display:block;text-align:center;margin:0 auto;padding:0 8px}
+  .weather-container{display:flex!important;justify-content:center!important;align-items:center!important;flex-direction:column!important}<script src="kmb_stops.js"></script>
+<script src="ctb_stops.js"></script>
+<script src="ctb_stop_routes.js"></script>
 <script>
 'use strict';
 
@@ -1117,7 +730,7 @@ function updateStatusLabels(){
   const el=document.getElementById('lastUpdate');
   if(el)el.textContent=(config.language==='en'?'Last Update: ':'最後更新：')+(liveData.updatedAt?liveData.updatedAt.toLocaleTimeString(config.language==='en'?'en-GB':'zh-Hant-HK',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}):'---');
   const vs=document.getElementById('versionStamp');
-  if(vs)vs.textContent='v0.2.2-surface';
+  if(vs)vs.textContent='v0.2.5';
   const swt=document.getElementById('swtTicker');
   let info = liveData.swt.length ? liveData.swt.join(' | ') : '';
   if(liveData.warningRecords && liveData.warningRecords.length > 0){
